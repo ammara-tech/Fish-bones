@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Icy Cuisine — Fish Bones</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="app">
+
+  <!-- TITLE SCREEN -->
+  <div class="screen active" id="screen-title">
+    <div class="aurora-wrap"><div class="aurora-band"></div><div class="aurora-band b2"></div><div class="aurora-band b3"></div></div>
+    <div class="toprow">
+      <button class="iconbtn" id="muteBtn" title="Mute">🔊</button>
+    </div>
+    <div class="sign-hang">
+      <div class="ropes"><div class="rope"></div><div class="rope"></div></div>
+      <div class="sign">
+        <p class="title-main">An Icy Cuisine</p>
+        <p class="title-sub">Fish Bones</p>
+        <p>Swim up/down to catch fish (+points) and dodge bones (−points). Use <strong>← / →</strong> to dash forward or back fast and ↑ / ↓ to move up and down.</p>
+      </div>
+    </div>
+    <div class="menu-row">
+      <div class="menu-actions">
+        <button class="btn" id="playBtn">▶ Play</button>
+        <button class="btn secondary" id="preyBtn">Select Prey</button>
+        <button class="btn secondary" id="predatorBtn">Select Predator</button>
+        <button class="btn amber" id="customBtn">Custom Predators</button>
+      </div>
+      <div class="credit-board">
+        <p>© Ammara Badat 2026</p>
+        <p>Created with HTML, CSS &amp; JavaScript</p>
+      </div>
+    </div>
+    <label class="twop-toggle"><span>Two Player</span><div class="switch" id="twoPlayerSwitch"><div class="knob"></div></div></label>
+    <br>
+
+    <div class="camp">
+      <div class="ground"></div>
+      <div class="campItem chair" style="left:6%"></div>
+      <div class="campItem chair" style="left:16%"></div>
+      <div class="campItem grill" style="left:28%"></div>
+      <div class="campItem cooler" style="left:40%"></div>
+      <div class="campItem tent" style="left:58%"></div>
+      <div class="campItem tent" style="left:75%; transform:scale(.8)"></div>
+      <div class="campItem rod" style="left:50%"></div>
+      <div class="campItem rod" style="left:53%; transform:rotate(-14deg)"></div>
+    </div>
+  </div>
+
+  <!-- PREY SELECT -->
+  <div class="screen" id="screen-prey">
+    <div class="toprow"><button class="iconbtn" id="backFromPrey">✕</button></div>
+    <h2 class="screen-title" id="preyTitleHeading">Choose Your Prey</h2>
+    <p class="screen-desc" id="preySubDesc">Pick who braves the ice water. (Player 1)</p>
+    <div class="card-grid" id="preyGrid"></div>
+    <div class="footer-nav">
+      <button class="btn secondary" id="preyBack">Back</button>
+      <button class="btn" id="preyNext">Next →</button>
+    </div>
+  </div>
+
+  <!-- PREDATOR SELECT -->
+  <div class="screen" id="screen-predator">
+    <div class="toprow"><button class="iconbtn" id="backFromPred">✕</button></div>
+    <h2 class="screen-title" id="predTitleHeading">Choose Your Predator</h2>
+    <p class="screen-desc" id="predSubDesc">Whoever hunts you across the ice. Tap Custom to allow multiple.</p>
+    <div class="card-grid" id="predatorGrid"></div>
+    <div class="footer-nav">
+      <button class="btn secondary" id="predBack">Back</button>
+      <button class="btn" id="predNext">Next →</button>
+    </div>
+  </div>
+
+  <!-- DIFFICULTY SELECT -->
+  <div class="screen" id="screen-difficulty">
+    <div class="toprow"><button class="iconbtn" id="backFromDiff">✕</button></div>
+    <h2 class="screen-title">Adventure Level</h2>
+    <p class="screen-desc">Higher levels mean faster predators, hungrier bone-fish, and thinner ice.</p>
+    <div class="diff-grid" id="diffGrid"></div>
+    <div class="footer-nav">
+      <button class="btn secondary" id="diffBack">Back</button>
+      <button class="btn amber" id="diffStart">Start Adventure 🐟</button>
+    </div>
+  </div>
+  <!-- GAME SCREEN -->
+  <div class="screen" id="screen-game">
+    <div id="gameCanvasWrap">
+      <canvas id="gameCanvas"></canvas>
+      <div id="warnFlash"></div>
+      <div id="hud">
+        <div class="hud-panel">
+          <div class="hud-score">P1: <span id="scoreP1">0</span></div>
+          <div class="hud-lives" id="livesP1"></div>
+          <div class="hud-panel hud-p2 hidden" id="p2panel" style="padding:6px 10px;">
+            <div class="hud-score" style="font-size:16px;">P2: <span id="scoreP2">0</span></div>
+            <div class="hud-lives" id="livesP2"></div>
+          </div>
+          <div class="powerup-indicators">
+            <div class="pu-chip" id="chip-shield">Shield</div>
+            <div class="pu-chip" id="chip-magnet">Magnet</div>
+            <div class="pu-chip" id="chip-slow">Slow-mo</div>
+            <div class="pu-chip" id="chip-mult">x2</div>
+          </div>
+        </div>
+        <button class="iconbtn" id="pauseBtnGame">⏸</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PAUSE OVERLAY -->
+  <div class="screen" id="screen-pause">
+    <h2 class="screen-title">Paused</h2>
+    <div class="menu-actions">
+      <button class="btn" id="resumeBtn">Resume</button>
+      <button class="btn secondary" id="restartFromPause">Restart Level</button>
+      <button class="btn danger" id="quitBtn">Quit to Menu</button>
+    </div>
+  </div>
+
+  <!-- GAME OVER -->
+  <div class="screen" id="screen-gameover">
+    <div class="sign-hang">
+      <div class="ropes"><div class="rope"></div><div class="rope"></div></div>
+      <div class="sign">
+        <p class="title-main" id="gameoverHeadline" style="font-size:clamp(26px,5vw,42px);">Game Over</p>
+        <div class="finalscore" id="finalScore">0</div>
+        <div class="result-line" id="resultLine"></div>
+        <div class="highscore" id="highscoreLine"></div>
+      </div>
+    </div>
+    <div class="menu-actions" style="margin-top:26px;">
+      <button class="btn" id="retryBtn">Retry Same Setup</button>
+      <button class="btn secondary" id="menuBtn">Main Menu</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
