@@ -112,12 +112,6 @@ html,body{margin:0;padding:0;width:100%;height:100%;background:var(--night);over
   .credit-board p:first-child{font-size:13px;}
 }
 
-.twop-toggle{display:flex; align-items:center; gap:10px; margin-top:22px; font-family:'Baloo 2'; font-size:15px; color:var(--ice);}
-.switch{position:relative; width:50px; height:26px; background:#123a5c; border-radius:20px; border:2px solid var(--ice-dim); cursor:pointer;}
-.switch .knob{position:absolute; top:1px; left:1px; width:18px; height:18px; border-radius:50%; background:var(--ice); transition:.2s;}
-.switch.on{background:var(--aurora);}
-.switch.on .knob{transform:translateX(24px); background:#fff;}
-
 h2.screen-title{font-family:'Baloo 2'; font-size:clamp(24px,4vw,34px); margin:0 0 6px; color:var(--snow); text-shadow:0 2px 8px rgba(0,0,0,.4);}
 p.screen-desc{color:var(--ice); margin:0 0 26px; font-size:15px; max-width:520px;}
 
@@ -134,8 +128,6 @@ p.screen-desc{color:var(--ice); margin:0 0 26px; font-size:15px; max-width:520px
 .card .tag{font-size:11px; color:var(--ice); opacity:.85; margin-top:2px;}
 .card .badge{position:absolute; top:6px; right:8px; font-size:11px; background:var(--aurora); color:#06331f; padding:2px 6px; border-radius:8px; font-weight:800; display:none;}
 .card.selected .badge{display:block;}
-.p2-label{position:absolute;top:6px;left:8px;font-size:10px;background:var(--amber);color:#3a2400;padding:2px 6px;border-radius:8px;font-weight:800;display:none;}
-
 .diff-grid{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; max-width:760px;}
 .diffcard{width:150px; padding:16px 12px; border-radius:14px; cursor:pointer; border:2px solid rgba(255,255,255,.15);
   background:rgba(255,255,255,.05); transition:.15s;}
@@ -158,7 +150,6 @@ p.screen-desc{color:var(--ice); margin:0 0 26px; font-size:15px; max-width:520px
 .hud-lives{display:flex; gap:5px; margin-top:4px;}
 .life-dot{width:14px;height:14px;border-radius:50%;background:var(--danger);box-shadow:0 0 0 1px rgba(0,0,0,.3);}
 .life-dot.off{background:rgba(255,255,255,.15);}
-.hud-p2{margin-top:10px;}
 #pauseBtnGame{pointer-events:auto;}
 .powerup-indicators{display:flex; gap:8px; margin-top:8px;}
 .pu-chip{font-size:11px; background:rgba(95,225,176,.25); border:1px solid var(--aurora); color:#dffff0; padding:3px 8px; border-radius:20px; display:none;}
@@ -176,5 +167,5 @@ p.screen-desc{color:var(--ice); margin:0 0 26px; font-size:15px; max-width:520px
 @media (max-width:640px){
   .card{width:130px;}
   .diffcard{width:130px;}
-  .camp{height:130px;}
 }
+
