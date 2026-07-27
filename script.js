@@ -107,11 +107,9 @@ const DIFFICULTIES = [
 ];
 
 const state = {
-  twoPlayer:false,
-  preyP1:'penguin', preyP2:'seal',
+  preyP1:'penguin',
   predators:['orca'], customMode:false,
   difficulty:'medium',
-  pickingPreyFor:1,
 };
 
 let highScore = 0;
@@ -133,12 +131,6 @@ document.getElementById('muteBtn').addEventListener('click', ()=>{
   }
 });
 
-document.getElementById('twoPlayerSwitch').addEventListener('click', function(){
-  state.twoPlayer = !state.twoPlayer;
-  this.classList.toggle('on', state.twoPlayer);
-  Audio_.sfx('click');
-});
-
 document.getElementById('playBtn').addEventListener('click', ()=>{ Audio_.unlock(); Audio_.sfx('select'); openPreySelect(); });
 document.getElementById('preyBtn').addEventListener('click', ()=>{ Audio_.unlock(); openPreySelect(); });
 document.getElementById('predatorBtn').addEventListener('click', ()=>{ Audio_.unlock(); state.customMode=false; openPredatorSelect(); });
@@ -152,23 +144,22 @@ document.getElementById('diffBack').addEventListener('click', ()=>show('screen-p
 
 /* ---- Prey select ---- */
 function openPreySelect(){
-  state.pickingPreyFor = 1;
   renderPreyGrid();
   document.getElementById('preyTitleHeading').textContent = 'Choose Your Prey';
-  document.getElementById('preySubDesc').textContent = state.twoPlayer ? 'Pick who braves the ice water. (Player 1: Arrow Keys)' : 'Pick who braves the ice water.';
+  document.getElementById('preySubDesc').textContent = 'Pick who braves the ice water.';
   show('screen-prey');
 }
 function renderPreyGrid(){
   const grid = document.getElementById('preyGrid');
   grid.innerHTML='';
   PREY_TYPES.forEach(p=>{
-    const sel = state.pickingPreyFor===1 ? state.preyP1===p.id : state.preyP2===p.id;
+    const sel = state.preyP1===p.id;
     const card = document.createElement('div');
     card.className = 'card'+(sel?' selected':'');
     card.innerHTML = `<div class="badge">✓</div><canvas width="120" height="84"></canvas><div class="name">${p.name}</div><div class="tag">${p.tag}</div>`;
     card.addEventListener('click', ()=>{
       Audio_.sfx('select');
-      if(state.pickingPreyFor===1) state.preyP1=p.id; else state.preyP2=p.id;
+      state.preyP1=p.id;
       renderPreyGrid();
     });
     grid.appendChild(card);
@@ -177,12 +168,6 @@ function renderPreyGrid(){
 }
 document.getElementById('preyNext').addEventListener('click', ()=>{
   Audio_.sfx('click');
-  if(state.twoPlayer && state.pickingPreyFor===1){
-    state.pickingPreyFor=2;
-    document.getElementById('preySubDesc').textContent='Pick Player 2\'s creature. (Player 2: W/S)';
-    renderPreyGrid();
-    return;
-  }
   state.customMode=false;
   openPredatorSelect();
 });
@@ -337,11 +322,11 @@ function fitCanvas(){
 window.addEventListener('resize', fitCanvas);
 
 const DIFF_PARAMS = {
-  easy:    {fishSpeed:140, predSpeed:170, fishRate:0.95, obsRate:0.6,  predRate:0.42, lives:4, boneRatio:0.30, warnTime:0.85},
-  medium:  {fishSpeed:175, predSpeed:225, fishRate:1.15, obsRate:0.85, predRate:0.65, lives:3, boneRatio:0.36, warnTime:0.65},
-  hard:    {fishSpeed:190, predSpeed:250, fishRate:1.35, obsRate:1.1,  predRate:0.9,  lives:2, boneRatio:0.40, warnTime:0.5},
-  extreme: {fishSpeed:225, predSpeed:350, fishRate:1.55, obsRate:1.35, predRate:1.2,  lives:1, boneRatio:0.46, warnTime:0.38},
-  boss:    {fishSpeed:175, predSpeed:210, fishRate:1.2,  obsRate:0.85, predRate:0.6,  lives:2, boneRatio:0.36, warnTime:0.55, isBoss:true},
+  easy:    {fishSpeed:150, predSpeed:170, fishRate:0.95, obsRate:0.6,  predRate:0.42, lives:4, boneRatio:0.30, warnTime:0.85},
+  medium:  {fishSpeed:195, predSpeed:225, fishRate:1.15, obsRate:0.85, predRate:0.65, lives:3, boneRatio:0.36, warnTime:0.65},
+  hard:    {fishSpeed:200, predSpeed:250, fishRate:1.35, obsRate:1.1,  predRate:0.9,  lives:2, boneRatio:0.40, warnTime:0.5},
+  extreme: {fishSpeed:285, predSpeed:350, fishRate:1.55, obsRate:1.35, predRate:1.2,  lives:1, boneRatio:0.46, warnTime:0.38},
+  boss:    {fishSpeed:185, predSpeed:210, fishRate:1.2,  obsRate:0.85, predRate:0.6,  lives:2, boneRatio:0.36, warnTime:0.55, isBoss:true},
 };
 
 // Difficulty ramps up the longer a run lasts: capped multiplier applied to
@@ -364,7 +349,7 @@ function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 const Game = (function(){
   let running=false, paused=false, rafId=null, lastT=0;
   let players=[], fishes=[], bones=[], obstacles=[], predators=[], powerups=[], particles=[];
-  let scoreP1=0, scoreP2=0, elapsed=0, params=null, bg=null, bosses=[];
+  let scoreP1=0, elapsed=0, params=null, bg=null, bosses=[];
   let spawnTimers={fish:0, obs:0, pred:0, pu:0};
   let ended=false;
 
@@ -385,10 +370,9 @@ const Game = (function(){
     show('screen-game');
     fitCanvas(); initBG();
     players=[]; fishes=[]; bones=[]; obstacles=[]; predators=[]; powerups=[]; particles=[]; bosses=[];
-    scoreP1=0; scoreP2=0; elapsed=0;
+    scoreP1=0; elapsed=0;
     spawnTimers={fish:0.4, obs:1.2, pred:1.6, pu:4};
     players.push(makePlayer(1, state.preyP1, VW*0.16));
-    if(state.twoPlayer) players.push(makePlayer(2, state.preyP2, VW*0.16));
     players.forEach(p=>p.lives=params.lives);
     updateHUDStatic();
     running=true; paused=false;
@@ -406,14 +390,11 @@ const Game = (function(){
   }
 
   function updateHUDStatic(){
-    document.getElementById('p2panel').classList.toggle('hidden', !state.twoPlayer);
     renderLives();
   }
   function renderLives(){
     const l1 = document.getElementById('livesP1'); l1.innerHTML='';
     for(let i=0;i<params.lives;i++){ const d=document.createElement('div'); d.className='life-dot'+(i<playerLivesLeft(1)?'':' off'); l1.appendChild(d); }
-    const l2 = document.getElementById('livesP2'); l2.innerHTML='';
-    if(state.twoPlayer){ for(let i=0;i<params.lives;i++){ const d=document.createElement('div'); d.className='life-dot'+(i<playerLivesLeft(2)?'':' off'); l2.appendChild(d); } }
   }
   function playerLivesLeft(idx){
     const p = players.find(pp=>pp.idx===idx);
@@ -459,7 +440,7 @@ const Game = (function(){
   const BOSS_SCORE_THRESHOLDS = [0, 25, 50];
   function updateBossSpawns(){
     if(elapsed<1.2) return;
-    const topScore = state.twoPlayer ? Math.max(scoreP1,scoreP2) : scoreP1;
+    const topScore = scoreP1;
     let desired = 1;
     for(let i=0;i<BOSS_SCORE_THRESHOLDS.length;i++){ if(topScore>=BOSS_SCORE_THRESHOLDS[i]) desired=i+1; }
     while(bosses.length<desired){ spawnBoss(bosses.length); }
@@ -486,9 +467,7 @@ const Game = (function(){
       p.shieldT = Math.max(0,p.shieldT-dt); p.shield = p.shieldT>0;
       p.magnetT = Math.max(0,p.magnetT-dt);
       p.multT = Math.max(0,p.multT-dt);
-      let up,down,left,right;
-      if(p.idx===1){ up=keys['ArrowUp']; down=keys['ArrowDown']; left=keys['ArrowLeft']; right=keys['ArrowRight']; }
-      else { up=keys['KeyW']; down=keys['KeyS']; left=keys['KeyA']; right=keys['KeyD']; }
+      const up=keys['ArrowUp'], down=keys['ArrowDown'], left=keys['ArrowLeft'], right=keys['ArrowRight'];
       const speed=280;
       const hSpeed=360; // fast forward/back dodge
       if(up) p.y -= speed*dt;
@@ -542,7 +521,8 @@ const Game = (function(){
       players.forEach(p=>{
         if(!p.alive || p.invulnT>0) return;
         if(Math.abs(o.x-p.x)<o.w/2+p.r*0.7 && Math.abs(o.y-p.y)<o.h/2+p.r*0.7){
-          damagePlayer(p, false);
+          if(p.shield){ p.shield=false; p.shieldT=0; p.invulnT=1.0; spawnParticles(p.x,p.y,'#8fd9e8',10); Audio_.sfx('shield'); }
+          else damagePlayer(p, false);
         }
       });
       if(o.x < -80) obstacles.splice(i,1);
@@ -558,7 +538,7 @@ const Game = (function(){
         players.forEach(p=>{
           if(!p.alive || p.invulnT>0) return;
           if(Math.abs(pr.x-p.x)<pr.w/2+p.r*0.75 && Math.abs(pr.y-p.y)<pr.h/2+p.r*0.75){
-            if(p.shield){ p.shield=false; p.shieldT=0; spawnParticles(p.x,p.y,'#8fd9e8',10); Audio_.sfx('shield'); }
+            if(p.shield){ p.shield=false; p.shieldT=0; p.invulnT=1.0; spawnParticles(p.x,p.y,'#8fd9e8',10); Audio_.sfx('shield'); }
             else damagePlayer(p, true);
           }
         });
@@ -615,7 +595,7 @@ const Game = (function(){
           if(!p.alive || p.invulnT>0) return;
           const d=Math.hypot(boss.x-p.x, boss.y-p.y);
           if(d < boss.r*0.8+p.r*0.7){
-            if(p.shield){ p.shield=false; p.shieldT=0; Audio_.sfx('shield'); }
+            if(p.shield){ p.shield=false; p.shieldT=0; p.invulnT=1.0; spawnParticles(p.x,p.y,'#8fd9e8',10); Audio_.sfx('shield'); }
             else damagePlayer(p,true);
           }
         });
@@ -637,13 +617,11 @@ const Game = (function(){
     updateChips();
     renderLives();
     document.getElementById('scoreP1').textContent = scoreP1;
-    document.getElementById('scoreP2').textContent = scoreP2;
   }
 
   function addScore(p, val){
     const mult = p.multT>0?2:1;
-    if(p.idx===1) scoreP1 = Math.max(0, scoreP1 + val*mult);
-    else scoreP2 = Math.max(0, scoreP2 + val*mult);
+    scoreP1 = Math.max(0, scoreP1 + val*mult);
   }
   function damagePlayer(p, fatal){
     p.invulnT = 1.0;
@@ -683,18 +661,11 @@ const Game = (function(){
   function endGame(){
     if(ended) return; ended=true;
     running=false; cancelAnimationFrame(rafId); Audio_.stopMusic(); Audio_.sfx('gameover');
-    const finalScore = state.twoPlayer ? Math.max(scoreP1,scoreP2) : scoreP1;
+    const finalScore = scoreP1;
     if(finalScore>highScore){ highScore=finalScore; try{localStorage.setItem('icyCuisineHighScore', String(highScore));}catch(e){} }
     document.getElementById('finalScore').textContent = finalScore;
     document.getElementById('gameoverHeadline').textContent = 'Game Over';
-    let resultLine='';
-    if(state.twoPlayer){
-      resultLine = scoreP1===scoreP2 ? `Tie game — P1 ${scoreP1} · P2 ${scoreP2}` :
-        (scoreP1>scoreP2 ? `Player 1 wins — ${scoreP1} to ${scoreP2}` : `Player 2 wins — ${scoreP2} to ${scoreP1}`);
-    } else {
-      resultLine = `Score: ${scoreP1}`;
-    }
-    document.getElementById('resultLine').textContent = resultLine;
+    document.getElementById('resultLine').textContent = `Score: ${scoreP1}`;
     document.getElementById('highscoreLine').textContent = 'Best: '+highScore;
     show('screen-gameover');
   }
@@ -745,7 +716,7 @@ const Game = (function(){
         ctx2d.fillStyle='#e85b5b';
         ctx2d.beginPath(); ctx2d.moveTo(edgeX,pr.y-18); ctx2d.lineTo(edgeX+ (pr.dir*22),pr.y); ctx2d.lineTo(edgeX,pr.y+18); ctx2d.fill();
         ctx2d.restore();
-        ctx2d.save(); ctx2d.strokeStyle='rgba(232,91,91,.35)'; ctx2d.lineWidth=2; ctx2d.setLineDash([6,6]);
+        ctx2d.save(); ctx2d.strokeStyle='rgba(232,91,91,.35)'; ctx2d.lineWidth=2;
         ctx2d.beginPath(); ctx2d.moveTo(0,pr.y); ctx2d.lineTo(VW,pr.y); ctx2d.stroke(); ctx2d.restore();
       } else {
         drawPredator(ctx2d, pr.type, pr.x, pr.y, pr.dir===1?1:-1, 1.15);
@@ -760,7 +731,7 @@ const Game = (function(){
         ctx2d.fillStyle='#e85b5b';
         ctx2d.beginPath(); ctx2d.moveTo(0,b.y-22); ctx2d.lineTo(26,b.y); ctx2d.lineTo(0,b.y+22); ctx2d.fill();
         ctx2d.restore();
-        ctx2d.save(); ctx2d.strokeStyle='rgba(232,91,91,.35)'; ctx2d.lineWidth=2; ctx2d.setLineDash([6,6]);
+        ctx2d.save(); ctx2d.strokeStyle='rgba(232,91,91,.35)'; ctx2d.lineWidth=2;
         ctx2d.beginPath(); ctx2d.moveTo(0,b.y); ctx2d.lineTo(VW,b.y); ctx2d.stroke(); ctx2d.restore();
       }
       if(b.x > -100) drawBossOrca(b); // stays hidden off-screen while lurking
@@ -853,3 +824,5 @@ Audio_.startMusic('title');
 show('screen-title');
 
 })();
+
+  
