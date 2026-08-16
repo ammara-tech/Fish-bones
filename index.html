@@ -28,14 +28,37 @@
     <div class="menu-row">
       <div class="menu-actions">
         <button class="btn" id="playBtn">▶ Play</button>
-        <button class="btn secondary" id="preyBtn">Select Prey</button>
-        <button class="btn secondary" id="predatorBtn">Select Predator</button>
         <button class="btn amber" id="customBtn">Custom Predators</button>
       </div>
       <div class="credit-board">
         <p>© Ammara Badat 2026</p>
         <p>Created with HTML, CSS &amp; JavaScript</p>
       </div>
+    </div>
+  </div>
+
+  <!-- PLATFORM SELECT -->
+  <div class="screen" id="screen-platform">
+    <div class="toprow"><button class="iconbtn" id="backFromPlatform">✕</button></div>
+    <h2 class="screen-title">Choose Your Platform</h2>
+    <p class="screen-desc">Pick how you'll play — this changes the on-screen controls.</p>
+    <div class="card-grid" id="platformGrid">
+      <div class="card" id="platformDesktop">
+        <div class="badge">✓</div>
+        <div class="platform-icon">🖥️</div>
+        <div class="name">Desktop</div>
+        <div class="tag">Arrow keys to move &amp; dash</div>
+      </div>
+      <div class="card" id="platformMobile">
+        <div class="badge">✓</div>
+        <div class="platform-icon">📱</div>
+        <div class="name">Mobile</div>
+        <div class="tag">Touch joystick &amp; dash buttons</div>
+      </div>
+    </div>
+    <div class="footer-nav">
+      <button class="btn secondary" id="platformBack">Back</button>
+      <button class="btn" id="platformNext">Next →</button>
     </div>
   </div>
 
@@ -92,6 +115,15 @@
         </div>
         <button class="iconbtn" id="pauseBtnGame">⏸</button>
       </div>
+      <div id="touchControls">
+        <div id="touchStick">
+          <div id="touchStickKnob"></div>
+        </div>
+        <div id="touchDashRow">
+          <button class="dashbtn" id="dashLeftBtn">◀◀</button>
+          <button class="dashbtn" id="dashRightBtn">▶▶</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -127,5 +159,3 @@
 <script src="script.js"></script>
 </body>
 </html>
-
- 
