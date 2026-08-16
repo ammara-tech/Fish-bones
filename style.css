@@ -15,9 +15,10 @@
   --good:#7fe0a8;
   font-family:'Nunito',sans-serif;
 }
-*{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
-html,body{margin:0;padding:0;width:100%;height:100%;background:var(--night);overflow:hidden;color:var(--snow);}
-#app{position:relative;width:100vw;height:100vh;overflow:hidden;}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; touch-action:manipulation;}
+html,body{margin:0;padding:0;width:100%;height:100%;background:var(--night);overflow:hidden;color:var(--snow);
+  overscroll-behavior:none;}
+#app{position:relative;width:100vw;height:100vh;height:calc(var(--vh, 1vh) * 100);overflow:hidden;}
 
 .screen{
   position:absolute; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center;
@@ -142,9 +143,12 @@ p.screen-desc{color:var(--ice); margin:0 0 26px; font-size:15px; max-width:520px
 
 /* ---- GAME SCREEN ---- */
 #screen-game{padding:0; background:none;}
-#gameCanvasWrap{position:relative; width:100%; height:100%;}
+#gameCanvasWrap{position:relative; width:100%; height:100%;
+  padding-top:env(safe-area-inset-top,0); padding-bottom:env(safe-area-inset-bottom,0);
+  padding-left:env(safe-area-inset-left,0); padding-right:env(safe-area-inset-right,0);}
 #gameCanvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
-#hud{position:absolute; top:0; left:0; width:100%; padding:14px 18px; display:flex; justify-content:space-between; align-items:flex-start; pointer-events:none; z-index:4;}
+#hud{position:absolute; top:0; left:0; width:100%; padding:14px 18px; display:flex; justify-content:space-between; align-items:flex-start; pointer-events:none; z-index:4;
+  padding-top:calc(14px + env(safe-area-inset-top,0)); padding-left:calc(18px + env(safe-area-inset-left,0)); padding-right:calc(18px + env(safe-area-inset-right,0));}
 .hud-panel{background:rgba(8,25,43,.55); border:1px solid rgba(255,255,255,.15); border-radius:12px; padding:8px 14px; backdrop-filter:blur(3px); font-family:'Baloo 2';}
 .hud-score{font-size:22px; font-weight:800; color:var(--snow);}
 .hud-score span{color:var(--aurora);}
@@ -157,6 +161,14 @@ p.screen-desc{color:var(--ice); margin:0 0 26px; font-size:15px; max-width:520px
 .pu-chip.active{display:block;}
 #warnFlash{position:absolute; inset:0; background:radial-gradient(circle at var(--wx,50%) var(--wy,50%), rgba(232,91,91,.35), transparent 60%); opacity:0; pointer-events:none; transition:opacity .15s;}
 
+/* rotate hint for phones held in portrait — this game plays best in landscape */
+#rotateHint{position:absolute; inset:0; z-index:20; display:none; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(6,18,31,.92); text-align:center; padding:24px; gap:10px;}
+#rotateHint.show{display:flex;}
+#rotateHint .spin{font-size:44px; animation:spinIcon 1.6s ease-in-out infinite;}
+@keyframes spinIcon{0%,100%{transform:rotate(0deg);}50%{transform:rotate(90deg);}}
+#rotateHint p{margin:0; font-family:'Baloo 2'; font-size:16px; color:var(--snow); max-width:280px;}
+
 /* ---- GAME OVER ---- */
 #screen-gameover .sign{padding:30px 46px;}
 .finalscore{font-family:'Baloo 2'; font-size:44px; font-weight:800; color:var(--aurora); margin:10px 0 2px;}
@@ -166,33 +178,50 @@ p.screen-desc{color:var(--ice); margin:0 0 26px; font-size:15px; max-width:520px
 .hidden{display:none !important;}
 
 /* ---- TOUCH CONTROLS (mobile mode) ---- */
+/* Sizes are defined with clamp() against viewport width/height so they scale
+   correctly on real phones (portrait, landscape, notches) rather than only
+   ever using the desktop-preview px sizes. */
 #touchControls{position:absolute; inset:0; display:none; pointer-events:none; z-index:6;}
 #touchControls.active{display:block;}
 #touchStick{
-  position:absolute; left:26px; bottom:26px; width:120px; height:120px; border-radius:50%;
-  background:rgba(8,25,43,.45); border:2px solid rgba(255,255,255,.25); pointer-events:auto;
+  position:absolute;
+  left:calc(20px + env(safe-area-inset-left,0));
+  bottom:calc(20px + env(safe-area-inset-bottom,0));
+  width:clamp(78px, 22vw, 116px); height:clamp(78px, 22vw, 116px);
+  border-radius:50%;
+  background:rgba(8,25,43,.5); border:2px solid rgba(255,255,255,.3); pointer-events:auto;
   touch-action:none; backdrop-filter:blur(3px);
 }
 #touchStickKnob{
-  position:absolute; left:50%; top:50%; width:52px; height:52px; border-radius:50%;
+  position:absolute; left:50%; top:50%; width:42%; height:42%; border-radius:50%;
   background:rgba(143,217,232,.55); border:2px solid var(--ice); transform:translate(-50%,-50%);
   pointer-events:none; transition:background .1s;
 }
 #touchStick.engaged #touchStickKnob{background:rgba(95,225,176,.65); border-color:var(--aurora);}
 #touchDashRow{
-  position:absolute; right:20px; bottom:26px; display:flex; gap:14px; pointer-events:auto;
+  position:absolute;
+  right:calc(16px + env(safe-area-inset-right,0));
+  bottom:calc(20px + env(safe-area-inset-bottom,0));
+  display:flex; gap:clamp(8px,2.5vw,14px); pointer-events:auto;
 }
 .dashbtn{
-  width:66px; height:66px; border-radius:50%; border:2px solid rgba(255,255,255,.25);
-  background:rgba(8,25,43,.5); color:var(--snow); font-size:16px; font-weight:800;
+  width:clamp(48px, 14vw, 64px); height:clamp(48px, 14vw, 64px); border-radius:50%;
+  border:2px solid rgba(255,255,255,.3);
+  background:rgba(8,25,43,.55); color:var(--snow); font-size:clamp(12px,3vw,16px); font-weight:800;
   display:flex; align-items:center; justify-content:center; touch-action:none; backdrop-filter:blur(3px);
 }
 .dashbtn:active, .dashbtn.pressed{background:rgba(240,168,87,.5); border-color:var(--amber);}
-@media (max-width:640px){
-  #touchStick{width:104px; height:104px; left:16px; bottom:16px;}
-  #touchStickKnob{width:44px; height:44px;}
-  #touchDashRow{right:16px; bottom:16px; gap:10px;}
-  .dashbtn{width:56px; height:56px; font-size:14px;}
+
+/* short/landscape screens (phones rotated, the intended play orientation):
+   pull controls further from the very bottom edge and shrink the HUD a touch */
+@media (max-height:480px){
+  #touchStick{width:clamp(64px,16vh,92px); height:clamp(64px,16vh,92px); bottom:calc(10px + env(safe-area-inset-bottom,0));}
+  #touchDashRow{bottom:calc(10px + env(safe-area-inset-bottom,0)); gap:8px;}
+  .dashbtn{width:clamp(44px,11vh,58px); height:clamp(44px,11vh,58px);}
+  .hud-panel{padding:5px 10px;}
+  .hud-score{font-size:16px;}
+  .life-dot{width:10px;height:10px;}
+  #hud{padding-top:calc(6px + env(safe-area-inset-top,0));}
 }
 
 @media (max-width:640px){
