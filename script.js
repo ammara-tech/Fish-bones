@@ -120,6 +120,7 @@ try{ highScore = parseInt(localStorage.getItem('icyCuisineHighScore')||'0',10) |
 function show(id){
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  if(typeof updateRotateHint==='function') updateRotateHint();
 }
 function backToTitle(){ Game.stop(); Audio_.startMusic('title'); show('screen-title'); }
 
@@ -330,6 +331,21 @@ function drawPredator(ctx,id,x,y,facing,scale){
   ctx.restore();
 }
 
+/* ---- Real viewport height fix (mobile browser chrome resizes the address
+   bar, so 100vh alone is unreliable) + orientation "please rotate" hint ---- */
+function setVH(){
+  document.documentElement.style.setProperty('--vh', (window.innerHeight*0.01)+'px');
+}
+function updateRotateHint(){
+  const hint = document.getElementById('rotateHint');
+  if(!hint) return;
+  const isMobileMode = typeof state!=='undefined' && state.platform==='mobile';
+  const inGame = document.getElementById('screen-game') && document.getElementById('screen-game').classList.contains('active');
+  const portrait = window.innerHeight > window.innerWidth;
+  hint.classList.toggle('show', !!(isMobileMode && inGame && portrait));
+}
+setVH();
+
 /* ============================= GAME ============================= */
 const canvas = document.getElementById('gameCanvas');
 const ctx2d = canvas.getContext('2d');
@@ -338,11 +354,19 @@ function fitCanvas(){
   const wrap = document.getElementById('gameCanvasWrap');
   const rect = wrap.getBoundingClientRect();
   const dpr = Math.min(window.devicePixelRatio||1, 2);
-  canvas.width = rect.width*dpr; canvas.height = rect.height*dpr;
+  canvas.width = Math.max(1,Math.round(rect.width*dpr)); canvas.height = Math.max(1,Math.round(rect.height*dpr));
   ctx2d.setTransform(dpr,0,0,dpr,0,0);
   VW = rect.width; VH = rect.height;
+  updateRotateHint();
 }
-window.addEventListener('resize', fitCanvas);
+let resizeRAF=null;
+function scheduleFit(){
+  setVH();
+  if(resizeRAF) cancelAnimationFrame(resizeRAF);
+  resizeRAF = requestAnimationFrame(fitCanvas);
+}
+window.addEventListener('resize', scheduleFit);
+window.addEventListener('orientationchange', scheduleFit);
 
 const DIFF_PARAMS = {
   easy:    {fishSpeed:150, predSpeed:170, fishRate:0.95, obsRate:0.6,  predRate:0.42, lives:4, boneRatio:0.30, warnTime:0.85},
@@ -928,12 +952,10 @@ document.getElementById('retryBtn').addEventListener('click', ()=>{ Audio_.sfx('
 document.getElementById('menuBtn').addEventListener('click', ()=>{ Audio_.sfx('click'); show('screen-title'); });
 
 /* ---------------- Boot ---------------- */
-window.addEventListener('resize', fitCanvas);
+setVH();
 fitCanvas();
 Audio_.startMusic('title');
 show('screen-title');
 
 })();
 
-
-  
