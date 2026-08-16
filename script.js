@@ -110,6 +110,7 @@ const state = {
   preyP1:'penguin',
   predators:['orca'], customMode:false,
   difficulty:'medium',
+  platform:'desktop',
 };
 
 let highScore = 0;
@@ -131,16 +132,38 @@ document.getElementById('muteBtn').addEventListener('click', ()=>{
   }
 });
 
-document.getElementById('playBtn').addEventListener('click', ()=>{ Audio_.unlock(); Audio_.sfx('select'); openPreySelect(); });
-document.getElementById('preyBtn').addEventListener('click', ()=>{ Audio_.unlock(); openPreySelect(); });
-document.getElementById('predatorBtn').addEventListener('click', ()=>{ Audio_.unlock(); state.customMode=false; openPredatorSelect(); });
-document.getElementById('customBtn').addEventListener('click', ()=>{ Audio_.unlock(); state.customMode=true; openPredatorSelect(); });
+document.getElementById('playBtn').addEventListener('click', ()=>{ Audio_.unlock(); Audio_.sfx('select'); state.customMode=false; openPlatformSelect(); });
+document.getElementById('customBtn').addEventListener('click', ()=>{ Audio_.unlock(); state.customMode=true; openPlatformSelect(); });
+document.getElementById('backFromPlatform').addEventListener('click', backToTitle);
 document.getElementById('backFromPrey').addEventListener('click', backToTitle);
 document.getElementById('backFromPred').addEventListener('click', backToTitle);
 document.getElementById('backFromDiff').addEventListener('click', backToTitle);
-document.getElementById('preyBack').addEventListener('click', backToTitle);
+document.getElementById('platformBack').addEventListener('click', backToTitle);
+document.getElementById('preyBack').addEventListener('click', ()=>show('screen-platform'));
 document.getElementById('predBack').addEventListener('click', ()=>show('screen-prey'));
 document.getElementById('diffBack').addEventListener('click', ()=>show('screen-predator'));
+
+/* ---- Platform select ---- */
+function openPlatformSelect(){
+  renderPlatformCards();
+  show('screen-platform');
+}
+function renderPlatformCards(){
+  const dCard = document.getElementById('platformDesktop');
+  const mCard = document.getElementById('platformMobile');
+  dCard.classList.toggle('selected', state.platform==='desktop');
+  mCard.classList.toggle('selected', state.platform==='mobile');
+}
+document.getElementById('platformDesktop').addEventListener('click', ()=>{
+  Audio_.sfx('select'); state.platform='desktop'; renderPlatformCards();
+});
+document.getElementById('platformMobile').addEventListener('click', ()=>{
+  Audio_.sfx('select'); state.platform='mobile'; renderPlatformCards();
+});
+document.getElementById('platformNext').addEventListener('click', ()=>{
+  Audio_.sfx('click');
+  openPreySelect();
+});
 
 /* ---- Prey select ---- */
 function openPreySelect(){
@@ -343,6 +366,83 @@ window.addEventListener('keydown', e=>{
 });
 window.addEventListener('keyup', e=>{ keys[e.code]=false; });
 
+/* ---------------- Touch controls (mobile mode) ---------------- */
+const touch = { active:false, dx:0, dy:0, dashLeft:false, dashRight:false };
+(function setupTouchControls(){
+  const wrap = document.getElementById('touchControls');
+  const stick = document.getElementById('touchStick');
+  const knob = document.getElementById('touchStickKnob');
+  const dashLeftBtn = document.getElementById('dashLeftBtn');
+  const dashRightBtn = document.getElementById('dashRightBtn');
+  let stickId = null, stickCenter = {x:0,y:0};
+  const MAX_R = 46;
+
+  function setEnabled(on){
+    wrap.classList.toggle('active', !!on);
+    touch.active = !!on;
+    if(!on) resetStick();
+  }
+  function resetStick(){
+    touch.dx=0; touch.dy=0;
+    knob.style.transform = 'translate(-50%,-50%)';
+    stick.classList.remove('engaged');
+  }
+  function stickStart(e){
+    const t = e.changedTouches ? e.changedTouches[0] : e;
+    stickId = t.identifier===undefined ? 'mouse' : t.identifier;
+    const r = stick.getBoundingClientRect();
+    stickCenter = {x:r.left+r.width/2, y:r.top+r.height/2};
+    stick.classList.add('engaged');
+    stickMove(e);
+    e.preventDefault();
+  }
+  function stickMove(e){
+    if(stickId===null) return;
+    let t = e;
+    if(e.changedTouches){
+      t = Array.from(e.changedTouches).find(ct=>ct.identifier===stickId);
+      if(!t) return;
+    }
+    let dx = t.clientX - stickCenter.x, dy = t.clientY - stickCenter.y;
+    const dist = Math.hypot(dx,dy);
+    if(dist>MAX_R){ dx = dx/dist*MAX_R; dy = dy/dist*MAX_R; }
+    knob.style.transform = `translate(${dx-26}px, ${dy-26}px)`;
+    touch.dx = dx/MAX_R; touch.dy = dy/MAX_R;
+    e.preventDefault();
+  }
+  function stickEnd(e){
+    if(e.changedTouches){
+      const still = Array.from(e.changedTouches).some(ct=>ct.identifier===stickId);
+      if(!still) return;
+    }
+    stickId = null;
+    resetStick();
+    e.preventDefault();
+  }
+  stick.addEventListener('touchstart', stickStart, {passive:false});
+  stick.addEventListener('touchmove', stickMove, {passive:false});
+  stick.addEventListener('touchend', stickEnd, {passive:false});
+  stick.addEventListener('touchcancel', stickEnd, {passive:false});
+  stick.addEventListener('mousedown', stickStart);
+  window.addEventListener('mousemove', e=>{ if(stickId==='mouse') stickMove(e); });
+  window.addEventListener('mouseup', e=>{ if(stickId==='mouse') stickEnd(e); });
+
+  function bindDash(btn, prop){
+    const on = e=>{ touch[prop]=true; btn.classList.add('pressed'); e.preventDefault(); };
+    const off = e=>{ touch[prop]=false; btn.classList.remove('pressed'); e.preventDefault(); };
+    btn.addEventListener('touchstart', on, {passive:false});
+    btn.addEventListener('touchend', off, {passive:false});
+    btn.addEventListener('touchcancel', off, {passive:false});
+    btn.addEventListener('mousedown', on);
+    btn.addEventListener('mouseup', off);
+    btn.addEventListener('mouseleave', off);
+  }
+  bindDash(dashLeftBtn,'dashLeft');
+  bindDash(dashRightBtn,'dashRight');
+
+  touch.setEnabled = setEnabled;
+})();
+
 function rand(a,b){ return a+Math.random()*(b-a); }
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
 
@@ -378,10 +478,11 @@ const Game = (function(){
     running=true; paused=false;
     lastT = performance.now();
     Audio_.startMusic('game');
+    if(touch.setEnabled) touch.setEnabled(state.platform==='mobile');
     cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
   }
-  function stop(){ running=false; cancelAnimationFrame(rafId); Audio_.stopMusic(); }
+  function stop(){ running=false; cancelAnimationFrame(rafId); Audio_.stopMusic(); if(touch.setEnabled) touch.setEnabled(false); }
   function togglePause(){
     if(!running) return;
     paused=!paused;
@@ -467,13 +568,22 @@ const Game = (function(){
       p.shieldT = Math.max(0,p.shieldT-dt); p.shield = p.shieldT>0;
       p.magnetT = Math.max(0,p.magnetT-dt);
       p.multT = Math.max(0,p.multT-dt);
-      const up=keys['ArrowUp'], down=keys['ArrowDown'], left=keys['ArrowLeft'], right=keys['ArrowRight'];
       const speed=280;
       const hSpeed=360; // fast forward/back dodge
-      if(up) p.y -= speed*dt;
-      if(down) p.y += speed*dt;
-      if(left) p.x -= hSpeed*dt;
-      if(right) p.x += hSpeed*dt;
+      if(state.platform==='mobile'){
+        // virtual joystick: analog vertical move, dash buttons for horizontal
+        p.y += touch.dy*speed*dt;
+        if(touch.dashLeft) p.x -= hSpeed*dt;
+        if(touch.dashRight) p.x += hSpeed*dt;
+        // allow slight horizontal drift from the stick too
+        p.x += touch.dx*speed*0.5*dt;
+      } else {
+        const up=keys['ArrowUp'], down=keys['ArrowDown'], left=keys['ArrowLeft'], right=keys['ArrowRight'];
+        if(up) p.y -= speed*dt;
+        if(down) p.y += speed*dt;
+        if(left) p.x -= hSpeed*dt;
+        if(right) p.x += hSpeed*dt;
+      }
       p.y = Math.max(30, Math.min(VH-30, p.y));
       p.x = Math.max(VW*0.05, Math.min(VW*0.46, p.x));
       p.bob += dt*4;
@@ -824,5 +934,6 @@ Audio_.startMusic('title');
 show('screen-title');
 
 })();
+
 
   
