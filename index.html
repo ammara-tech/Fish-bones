@@ -14,6 +14,7 @@
 <body>
 <div id="app">
   <canvas id="snowCanvas" aria-hidden="true"></canvas>
+  <div id="toastStack" aria-live="polite"></div>
 
   <!-- TITLE SCREEN -->
   <div class="screen active" id="screen-title">
@@ -32,8 +33,12 @@
     <div class="menu-row">
       <div class="menu-actions">
         <button class="btn" id="playBtn">▶ Play</button>
-        <button class="btn amber" id="customBtn">Custom Predators</button>
-        <button class="btn secondary" id="howtoBtn">How to Play</button>
+        <button class="btn amber" id="dailyBtn">📅 Daily Challenge</button>
+        <div class="menu-small">
+          <button class="btn secondary" id="customBtn">Custom Predators</button>
+          <button class="btn secondary" id="howtoBtn">How to Play</button>
+          <button class="btn secondary wide" id="achievementsBtn">🏆 Achievements <span id="achCount"></span></button>
+        </div>
       </div>
       <div class="credit-board">
         <p>© Ammara Badat 2026</p>
@@ -152,6 +157,33 @@
     </div>
   </div>
 
+  <!-- DAILY CHALLENGE -->
+  <div class="screen" id="screen-daily">
+    <div class="toprow"><button class="iconbtn" id="backFromDaily" title="Back">✕</button></div>
+    <h2 class="screen-title">Daily Challenge</h2>
+    <p class="screen-desc" id="dailyDate"></p>
+    <div class="daily-card">
+      <div class="daily-row"><div class="daily-label">You are</div><div class="daily-chars" id="dailyPrey"></div></div>
+      <div class="daily-row"><div class="daily-label">Hunted by</div><div class="daily-chars" id="dailyPreds"></div></div>
+      <div class="daily-row"><div class="daily-label">Level</div><div class="daily-value" id="dailyLevel"></div></div>
+      <div class="daily-row"><div class="daily-label">Twist</div><div class="daily-value" id="dailyTwist"></div></div>
+    </div>
+    <div class="daily-stats"><span id="dailyBest"></span><span id="dailyStreak"></span></div>
+    <div class="footer-nav">
+      <button class="btn secondary" id="dailyBack">Back</button>
+      <button class="btn amber" id="dailyStart">Start Challenge 🐟</button>
+    </div>
+  </div>
+
+  <!-- ACHIEVEMENTS -->
+  <div class="screen" id="screen-achievements">
+    <div class="toprow"><button class="iconbtn" id="backFromAch" title="Back">✕</button></div>
+    <h2 class="screen-title">Achievements</h2>
+    <p class="screen-desc" id="achSummary"></p>
+    <div class="ach-grid" id="achGrid"></div>
+    <div class="footer-nav"><button class="btn" id="achDone">Back</button></div>
+  </div>
+
   <!-- HOW TO PLAY -->
   <div class="screen" id="screen-howto">
     <div class="toprow"><button class="iconbtn" id="backFromHowto" title="Back">✕</button></div>
@@ -186,6 +218,7 @@
       </div>
     </div>
     <div class="menu-actions">
+      <button class="btn amber hidden" id="shareDailyBtn">📋 Copy my result</button>
       <button class="btn" id="retryBtn">Retry Same Setup</button>
       <button class="btn secondary" id="menuBtn">Main Menu</button>
     </div>
@@ -198,6 +231,7 @@
 <script src="js/audio.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/scenery.js"></script>
+<script src="js/progress.js"></script>
 <script src="js/screens.js"></script>
 <script src="js/input.js"></script>
 <script src="js/game.js"></script>

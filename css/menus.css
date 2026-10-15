@@ -146,3 +146,68 @@
 .howto-tips{display:flex; flex-wrap:wrap; gap:6px 16px; justify-content:center; max-width:720px; margin-top:12px; font-size:12.5px; color:var(--snow);}
 .howto-tips b{color:var(--aurora); margin-right:4px;}
 @media (max-height:480px){ .howto-tips{margin-top:6px; font-size:10.5px; gap:2px 12px;} }
+
+/* ---- Title: smaller secondary buttons in a grid ---- */
+.menu-small{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
+.menu-small .btn{font-size:15px; padding:10px 12px;}
+.menu-small .btn.wide{grid-column:1 / -1;}
+#achCount{opacity:.7; font-size:13px; margin-left:4px;}
+
+/* ---- Locked character cards ---- */
+.card.locked{cursor:not-allowed; background:rgba(0,0,0,.18);}
+.card.locked canvas{filter:grayscale(1) brightness(.35);}
+.card.locked .name{opacity:.6;}
+.card.locked .tag{color:var(--amber); opacity:1;}
+.card .lock{position:absolute; top:36px; left:50%; transform:translateX(-50%); font-size:24px; z-index:1;}
+.card.nope{animation:nope .35s ease;}
+@keyframes nope{20%,60%{transform:translateX(-6px);} 40%,80%{transform:translateX(6px);}}
+@media (hover:hover){ .card.locked:hover{transform:none; border-color:rgba(255,255,255,.15);} }
+
+/* ---- Daily challenge ---- */
+.daily-card{display:flex; flex-direction:column; gap:10px; width:min(520px,92vw); padding:16px 18px; border-radius:16px;
+  background:rgba(8,25,43,.55); border:2px solid rgba(240,168,87,.45); text-align:left;}
+.daily-row{display:flex; align-items:center; gap:14px;}
+.daily-label{width:84px; flex:0 0 auto; font-family:var(--font-display); font-weight:700; color:var(--amber); font-size:14px;}
+.daily-value{font-size:14px;}
+.daily-value b{color:var(--snow);}
+.daily-chars{display:flex; gap:10px; flex-wrap:wrap;}
+.daily-char{display:flex; flex-direction:column; align-items:center; font-size:12px; font-weight:700;}
+.daily-char canvas{width:72px; height:50px;}
+.daily-stats{display:flex; gap:18px; margin-top:12px; font-weight:800; color:var(--aurora); font-size:14px;}
+
+/* ---- Achievements ---- */
+.ach-grid{display:grid; grid-template-columns:repeat(auto-fill, minmax(220px,1fr)); gap:10px; width:min(940px,94vw);}
+.ach{display:flex; gap:10px; align-items:center; text-align:left; padding:10px 12px; border-radius:12px;
+  background:rgba(255,255,255,.04); border:2px solid rgba(255,255,255,.1); opacity:.75;}
+.ach.done{opacity:1; border-color:rgba(95,225,176,.6); background:rgba(95,225,176,.1);}
+.ach-icon{font-size:26px; width:36px; text-align:center; flex:0 0 auto;}
+.ach .name{font-family:var(--font-display); font-weight:700; font-size:15px;}
+.ach .tag{font-size:12px; color:var(--ice);}
+.ach-reward{font-size:11px; font-weight:800; color:var(--amber); margin-top:2px;}
+
+@media (max-height:480px){
+  .menu-small .btn{font-size:13px; padding:7px 10px;}
+  .daily-card{padding:8px 14px; gap:4px;}
+  .daily-char canvas{width:54px; height:38px;}
+  .daily-stats{margin-top:6px;}
+  .ach-grid{grid-template-columns:repeat(3, 1fr); gap:6px;}
+  .ach{padding:5px 8px;}
+  .ach-icon{font-size:20px; width:26px;}
+  .ach .name{font-size:13px;}
+  .ach .tag{font-size:10.5px;}
+  #screen-achievements p.screen-desc{display:none;}
+  #screen-achievements .footer-nav, #screen-daily .footer-nav{margin-top:8px;}
+}
+/* Sideways phones: the title sign drops its instructions (How to Play has them) so the menu fits */
+@media (max-height:480px){
+  #screen-title .sign p:not(.title-main):not(.title-sub){display:none;}
+  #screen-title .title-main{font-size:34px;}
+  #screen-title .title-sub{margin-top:4px; font-size:13px;}
+  #screen-title .rope{height:14px;}
+  #screen-title .menu-actions{gap:8px;}
+  #screen-title .credit-board{width:110px; height:110px; padding:8px; gap:4px;}
+  #screen-title .credit-board p{font-size:11px;}
+  #screen-title .credit-board p:first-child{font-size:12px;}
+  .ach-grid{grid-template-columns:repeat(4, 1fr);}
+  .ach-reward{font-size:10px;}
+}

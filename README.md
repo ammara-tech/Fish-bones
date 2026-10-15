@@ -20,7 +20,8 @@ js/               loaded in this order:
   audio.js        sound effects + generated music (Web Audio)
   sprites.js      canvas drawings of every character and item (animated)
   scenery.js      underwater backdrop: day/night water, light rays, ice, seabed
-  screens.js      screen switching, viewport helpers
+  progress.js     achievements, unlockable characters, daily challenge
+  screens.js      screen switching, viewport helpers, pop-up toasts
   input.js        keyboard + touch joystick
   game.js         game loop: spawning, collisions, drawing
   menus.js        menu flow and buttons
