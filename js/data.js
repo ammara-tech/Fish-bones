@@ -57,13 +57,20 @@ const state = {
   platform: isTouchDevice ? 'mobile' : 'desktop',
 };
 
-/* ---- High score (saved in the browser) ---- */
-const HIGH_SCORE_KEY = 'icyCuisineHighScore';
+/* ---- Best score for each level (saved in the browser) ---- */
 const HighScore = {
-  get(){ try{ return parseInt(localStorage.getItem(HIGH_SCORE_KEY)||'0',10) || 0; }catch(e){ return 0; } },
-  submit(score){
-    const best = Math.max(this.get(), score);
-    try{ localStorage.setItem(HIGH_SCORE_KEY, String(best)); }catch(e){}
-    return best;
+  key(level){ return 'icyCuisineHighScore:'+level; },
+  get(level){
+    try{ return parseInt(localStorage.getItem(this.key(level))||'0',10) || 0; }catch(e){ return 0; }
+  },
+  // Returns {best, isNew}
+  submit(level, score){
+    const previous = this.get(level);
+    const isNew = score > previous;
+    if(isNew){ try{ localStorage.setItem(this.key(level), String(score)); }catch(e){} }
+    return {best: Math.max(previous, score), isNew};
   },
 };
+
+// Respect the player's "reduce motion" system setting (used for screen shake).
+const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;

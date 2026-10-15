@@ -68,3 +68,21 @@
   .life-dot{width:10px; height:10px;}
   #hud{padding-top:calc(6px + env(safe-area-inset-top,0px));}
 }
+
+/* ---- HUD buttons (mute + pause) ---- */
+.hud-buttons{display:flex; gap:10px; pointer-events:auto;}
+
+/* ---- "3, 2, 1, Go!" countdown ---- */
+#countdown{position:absolute; inset:0; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:5;
+  font-family:var(--font-display); font-weight:800; font-size:clamp(64px,14vw,140px); color:var(--snow);
+  text-shadow:0 6px 0 rgba(6,18,31,.6), 0 0 30px rgba(95,225,176,.6);}
+#countdown.pop{animation:countPop .7s ease-out forwards;}
+@keyframes countPop{
+  0%{transform:scale(1.8); opacity:0;}
+  25%{transform:scale(1); opacity:1;}
+  80%{opacity:1;}
+  100%{transform:scale(.85); opacity:0;}
+}
+@media (prefers-reduced-motion: reduce){
+  #countdown.pop{animation:none;}
+}

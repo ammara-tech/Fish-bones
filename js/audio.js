@@ -47,6 +47,8 @@ const Sound = (function(){
     select:   ()=>tone(700,0.06,'triangle',0.12),
     warn:     ()=>tone(220,0.18,'square',0.12),
     shield:   ()=>{ tone(500,0.1,'sine',0.15); tone(750,0.15,'sine',0.12,0.08); },
+    count:    ()=>tone(660,0.12,'triangle',0.14),
+    go:       ()=>{ tone(990,0.18,'triangle',0.16); tone(1320,0.22,'triangle',0.12,0.06); },
     gameover: ()=>[400,340,280,200,140].forEach((f,i)=>tone(f,0.25,'sawtooth',0.16,i*0.12)),
   };
   function sfx(name){ if(SFX[name]) SFX[name](); }
