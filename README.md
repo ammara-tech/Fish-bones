@@ -2,7 +2,7 @@
 
 A small arcade game in plain HTML, CSS and JavaScript. Swim up and down to catch fish, dodge bones, glaciers and predators.
 
-Open `index.html` in a browser to play — no build step needed.
+Open `https://fish-bones.vercel.app/` in a browser to play — no build step needed.
 
 ## Controls
 - **Desktop:** ↑ / ↓ to swim, ← / → to dash, Esc or P to pause
