@@ -23,7 +23,8 @@ const Game = (function(){
 
   let VW = 960, VH = 540;
   let running = false, paused = false, ended = false, rafId = null, lastT = 0;
-  let player = null, params = null, bg = null;
+  let player = null, params = null;
+  let anim = 0;                        // always-running clock for character animation
   let fishes = [], bones = [], puffers = [], obstacles = [], predators = [], bosses = [], powerups = [], particles = [], floaters = [];
   let score = 0, elapsed = 0, wave = 1;
   let combo = 0, bestCombo = 0, fishEaten = 0, closeCalls = 0;
@@ -49,7 +50,7 @@ const Game = (function(){
     params = DIFF_PARAMS[state.difficulty];
     show('screen-game');
     fitCanvas();
-    initBackground();
+    Scenery.init(VW, VH);
 
     const prey = findById(PREY_TYPES, state.prey);
     const maxLives = params.lives + prey.stats.bonusLives;
@@ -62,7 +63,7 @@ const Game = (function(){
 
     fishes = []; bones = []; puffers = []; obstacles = []; predators = []; bosses = [];
     powerups = []; particles = []; floaters = [];
-    score = 0; elapsed = 0; wave = 1; shake = 0;
+    score = 0; elapsed = 0; wave = 1; shake = 0; anim = 0;
     combo = 0; bestCombo = 0; fishEaten = 0; closeCalls = 0;
     shown = {score:-1, lives:-1, wave:-1, combo:-1};
     countdownT = COUNT_STEP*3; goT = 0; shownCount = null;
@@ -105,6 +106,7 @@ const Game = (function(){
     if(!running || paused) return;
     const dt = Math.min((t-lastT)/1000, 0.035);
     lastT = t;
+    anim += dt;
     if(countdownT>0) updateCountdown(dt);
     else { elapsed += dt; update(dt); }
     if(running) draw();
@@ -112,12 +114,6 @@ const Game = (function(){
   }
 
   /* ---------------- Spawning ---------------- */
-  function initBackground(){
-    bg = {bubbles:[], floes:[]};
-    for(let i=0;i<26;i++) bg.bubbles.push({x:rand(0,VW), y:rand(0,VH), r:rand(2,6), sp:rand(10,26), drift:rand(-8,8)});
-    for(let i=0;i<5;i++)  bg.floes.push({x:rand(0,VW), y:rand(30,VH-30), w:rand(60,140), sp:rand(14,26)});
-  }
-
   function spawnFish(){
     const speed = params.fishSpeed*getIntensity(elapsed);
     const y = rand(50, VH-50);
@@ -143,7 +139,7 @@ const Game = (function(){
     predators.push({
       type: type.id, x: fromLeft ? -60 : VW+60, y, baseY: y, dir: fromLeft ? 1 : -1,
       sp: params.predSpeed*type.stats.speedMul*getIntensity(elapsed)*rand(0.9,1.2),
-      w: type.stats.w, h: type.stats.h, weave: type.stats.weave, age: Math.random()*6,
+      w: type.stats.w, h: type.stats.h, weave: type.stats.weave, age: Math.random()*6, seed: Math.random()*10,
       warn: params.warnTime, phase:'warn', hit:false, scored:false,
     });
   }
@@ -204,10 +200,7 @@ const Game = (function(){
   function hideBanner(){ clearTimeout(bannerTimer); hud.banner.classList.remove('show'); }
 
   /* ---------------- Update ---------------- */
-  function updateBackground(dt){
-    bg.bubbles.forEach(b=>{ b.y -= b.sp*dt; b.x += Math.sin(elapsed+b.x)*b.drift*dt; if(b.y<-10){ b.y=VH+10; b.x=rand(0,VW); } });
-    bg.floes.forEach(f=>{ f.x -= f.sp*dt; if(f.x<-160) f.x = VW+rand(0,160); });
-  }
+  function updateBackground(dt){ Scenery.update(dt, anim); }
 
   function movePlayer(dt){
     const p = player;
@@ -492,19 +485,16 @@ const Game = (function(){
   function draw(){
     const p = player;
     const frozen = p.freezeT>0;
-    // water
-    const grad = ctx.createLinearGradient(0,0,0,VH);
-    grad.addColorStop(0,'#0d3a5c'); grad.addColorStop(0.5,'#0a2e4d'); grad.addColorStop(1,'#071f38');
-    ctx.fillStyle = grad; ctx.fillRect(0,0,VW,VH);
-
     ctx.save();
     if(shake>0) ctx.translate(rand(-shake,shake), rand(-shake,shake));
-
-    // ice floe silhouettes & bubbles
-    ctx.fillStyle = 'rgba(180,225,240,0.10)';
-    bg.floes.forEach(f=>{ ctx.beginPath(); ctx.ellipse(f.x,f.y,f.w/2,14,0,0,Math.PI*2); ctx.fill(); });
-    ctx.fillStyle = 'rgba(220,245,255,0.35)';
-    bg.bubbles.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); });
+    const night = Scenery.draw(ctx, VW, VH, elapsed, anim);
+    // at night, creatures get a faint moonlit outline so dark ones stay visible
+    const glow = night>0.35 ? (night-0.35)/0.65 : 0;
+    const lit = draw=>{
+      if(!glow) return draw();
+      ctx.save(); ctx.shadowColor = `rgba(175,225,255,${0.85*glow})`; ctx.shadowBlur = 10*glow;
+      draw(); ctx.restore();
+    };
 
     obstacles.forEach(o=>drawGlacier(ctx, o));
     fishes.forEach(f=>{
@@ -518,14 +508,15 @@ const Game = (function(){
     predators.forEach(pr=>{
       if(pr.phase==='warn'){ if(!frozen) drawWarning(ctx, pr.dir===1 ? 30 : VW-30, pr.dir, pr.y, VW, 18, elapsed*20); }
       else {
-        drawPredator(ctx, pr.type, pr.x, pr.y, pr.dir, 1.15);
+        lit(()=>drawPredator(ctx, pr.type, pr.x, pr.y, pr.dir, 1.15, frozen ? pr.seed : anim+pr.seed));
         if(frozen) drawFrozenShell(ctx, pr.x, pr.y, pr.w*1.15, pr.h*1.15);
       }
     });
     bosses.forEach(b=>{
       if(b.phase==='warn' && !frozen) drawWarning(ctx, 0, 1, b.y, VW, 22, elapsed*30);
       if(b.x > -140){ // mostly off-screen while lurking
-        drawBoss(ctx, b);
+        b.anim = frozen ? (b.anim||0) : anim + b.slot*1.3;
+        lit(()=>drawBoss(ctx, b));
         if(frozen) drawFrozenShell(ctx, b.x, b.y, 200, 70);
       }
     });
@@ -541,7 +532,7 @@ const Game = (function(){
         ctx.strokeStyle='rgba(232,91,91,.25)'; ctx.lineWidth=2; ctx.setLineDash([6,8]);
         ctx.beginPath(); ctx.arc(p.x,y,90,elapsed*2,elapsed*2+Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
       }
-      drawPrey(ctx, p.preyId, p.x, y, 1, 1.4);
+      lit(()=>drawPrey(ctx, p.preyId, p.x, y, 1, 1.4, anim*(p.speedT>0 ? 1.6 : 1)));
     }
 
     particles.forEach(pt=>{

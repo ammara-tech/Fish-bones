@@ -18,11 +18,13 @@ css/
 js/               loaded in this order:
   data.js         characters, difficulty tuning, player setup, high score
   audio.js        sound effects + generated music (Web Audio)
-  sprites.js      canvas drawings of every character and item
+  sprites.js      canvas drawings of every character and item (animated)
+  scenery.js      underwater backdrop: day/night water, light rays, ice, seabed
   screens.js      screen switching, viewport helpers
   input.js        keyboard + touch joystick
   game.js         game loop: spawning, collisions, drawing
   menus.js        menu flow and buttons
+  snow.js         menu snowfall + animated character cards
   main.js         boot
 ```
 
