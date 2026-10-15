@@ -18,7 +18,7 @@
   <div class="screen active" id="screen-title">
     <div class="aurora-wrap"><div class="aurora-band"></div><div class="aurora-band b2"></div><div class="aurora-band b3"></div></div>
     <div class="toprow">
-      <button class="iconbtn" id="muteBtn" title="Mute">🔊</button>
+      <button class="iconbtn mute-toggle" id="muteBtn" title="Mute">🔊</button>
     </div>
     <div class="sign-hang">
       <div class="ropes"><div class="rope"></div><div class="rope"></div></div>
@@ -32,6 +32,7 @@
       <div class="menu-actions">
         <button class="btn" id="playBtn">▶ Play</button>
         <button class="btn amber" id="customBtn">Custom Predators</button>
+        <button class="btn secondary" id="howtoBtn">How to Play</button>
       </div>
       <div class="credit-board">
         <p>© Ammara Badat 2026</p>
@@ -106,18 +107,22 @@
     <div id="gameCanvasWrap">
       <canvas id="gameCanvas"></canvas>
       <div id="warnFlash"></div>
+      <div id="countdown" aria-live="assertive"></div>
+      <div id="waveBanner" aria-live="polite"><div class="wave-title"></div><div class="wave-sub"></div></div>
       <div id="hud">
         <div class="hud-panel">
           <div class="hud-score">Score: <span id="scoreP1">0</span></div>
           <div class="hud-lives" id="livesP1"></div>
-          <div class="powerup-indicators">
-            <div class="pu-chip" id="chip-shield">Shield</div>
-            <div class="pu-chip" id="chip-magnet">Magnet</div>
-            <div class="pu-chip" id="chip-slow">Slow-mo</div>
-            <div class="pu-chip" id="chip-mult">x2</div>
+          <div class="hud-meta">
+            <span id="hudWave">Wave 1</span>
+            <span id="hudCombo" class="hud-combo"></span>
           </div>
+          <div class="powerup-indicators" id="powerupChips"></div>
         </div>
-        <button class="iconbtn" id="pauseBtnGame" title="Pause (Esc / P)">⏸</button>
+        <div class="hud-buttons">
+          <button class="iconbtn mute-toggle" id="muteBtnGame" title="Mute (M)">🔊</button>
+          <button class="iconbtn" id="pauseBtnGame" title="Pause (Esc / P)">⏸</button>
+        </div>
       </div>
       <div id="touchControls">
         <div id="touchStick">
@@ -141,7 +146,28 @@
     <div class="menu-actions">
       <button class="btn" id="resumeBtn">Resume</button>
       <button class="btn secondary" id="restartFromPause">Restart Level</button>
+      <button class="btn secondary" id="howtoFromPause">How to Play</button>
       <button class="btn danger" id="quitBtn">Quit to Menu</button>
+    </div>
+  </div>
+
+  <!-- HOW TO PLAY -->
+  <div class="screen" id="screen-howto">
+    <div class="toprow"><button class="iconbtn" id="backFromHowto" title="Back">✕</button></div>
+    <h2 class="screen-title">How to Play</h2>
+    <p class="screen-desc">Eat fish, dodge everything else, and survive as long as you can.</p>
+    <div class="howto-grid" id="howtoGrid"></div>
+    <div class="howto-tips">
+      <span><b>Combos</b> 5 fish in a row = x2, 10 = x3 (bones &amp; hits reset it)</span>
+      <span><b>Close calls</b> dodge a predator by a whisker for bonus points</span>
+      <span><b>Waves</b> every 30s it gets faster — plus a wave bonus</span>
+    </div>
+    <div class="howto-controls">
+      <div><strong>Keyboard</strong>↑ / ↓ swim · ← / → dash · Esc or P pause · M mute</div>
+      <div><strong>Touch</strong>Joystick to swim · ◀◀ / ▶▶ buttons to dash</div>
+    </div>
+    <div class="footer-nav">
+      <button class="btn" id="howtoDone">Got it!</button>
     </div>
   </div>
 
@@ -153,7 +179,9 @@
         <p class="title-main small" id="gameoverHeadline">Game Over</p>
         <div class="finalscore" id="finalScore">0</div>
         <div class="result-line" id="resultLine"></div>
+        <div class="run-stats" id="runStats"></div>
         <div class="highscore" id="highscoreLine"></div>
+        <div class="new-best hidden" id="newBestBadge">★ New best! ★</div>
       </div>
     </div>
     <div class="menu-actions">

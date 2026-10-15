@@ -5,7 +5,7 @@ A small arcade game in plain HTML, CSS and JavaScript. Swim up and down to catch
 Open `https://fish-bones.vercel.app/` in a browser to play — no build step needed.
 
 ## Controls
-- **Desktop:** ↑ / ↓ to swim, ← / → to dash, Esc or P to pause
+- **Desktop:** ↑ / ↓ to swim, ← / → to dash, Esc or P to pause, M to mute
 - **Mobile:** joystick on the left, dash buttons on the right (play in landscape)
 
 ## Project layout
