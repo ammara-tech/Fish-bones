@@ -48,7 +48,9 @@ function characterCard(kind, item, selected, onPick){
   card.innerHTML = `<div class="badge">✓</div><canvas width="120" height="84"></canvas>
     <div class="name">${item.name}</div><div class="tag">${item.tag}</div>`;
   card.addEventListener('click', ()=>{ Sound.sfx('select'); onPick(); });
-  drawCharacterIcon(card.querySelector('canvas'), kind, item.id);
+  const canvas = card.querySelector('canvas');
+  Object.assign(canvas.dataset, {kind, id:item.id, offset:Math.random()*5}); // animated by snow.js
+  drawCharacterIcon(canvas, kind, item.id);
   return card;
 }
 
