@@ -107,9 +107,11 @@ on('diffStart', ()=>{ Sound.sfx('click'); Game.start(); });
 let howtoReturnTo = 'screen-title';
 const HOWTO_ITEMS = [
   {title:'Fish',      info:'+1 to +3 points',             draw:c=>drawFish(c, 60, 42, '#5fe1b0')},
+  {title:'Golden fish', info:'Rare & fast: +10 points',  draw:c=>drawGoldenFish(c, 62, 42, 0.3)},
   {title:'Bones',     info:'−2 or −3 points',             draw:c=>drawBone(c, 60, 42)},
+  {title:'Pufferfish', info:'Spotty — puffs up when close. Don\'t touch!', draw:c=>{ drawPuffer(c, 36, 42, 0); drawPuffer(c, 88, 42, 1); }},
   {title:'Glaciers',  info:'Bump one and lose a life',    draw:c=>drawGlacier(c, {x:60, y:44, w:34, h:50})},
-  {title:'Predators', info:'A red arrow warns which lane they charge down', draw:c=>{
+  {title:'Predators', info:'Red arrow shows the lane they charge', draw:c=>{
     drawWarning(c, 8, 1, 42, 120, 14, Math.PI/2);
     drawPredator(c, 'orca', 76, 42, -1, 0.9);
   }},

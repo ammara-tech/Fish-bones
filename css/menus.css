@@ -120,20 +120,29 @@
 .howto-controls{display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:16px; max-width:640px;}
 .howto-controls div{font-size:13px; padding:8px 14px; border-radius:12px; background:rgba(8,25,43,.55); border:1px solid rgba(255,255,255,.15);}
 .howto-controls strong{display:block; font-family:var(--font-display); color:var(--amber); font-size:14px;}
+@media (min-width:1000px) and (min-height:481px){
+  .howto-grid{grid-template-columns:repeat(6, 150px);}
+}
 @media (max-width:640px){
   .howto-grid{grid-template-columns:repeat(2, 150px);}
 }
 /* Sideways phones: small horizontal tiles so everything fits on one screen */
 @media (max-height:480px){
   #screen-howto h2.screen-title{font-size:22px; margin:0;}
-  #screen-howto p.screen-desc{margin-bottom:8px;}
+  #screen-howto p.screen-desc{display:none;}
   .howto-grid{grid-template-columns:repeat(4, minmax(0, 170px)); gap:6px;}
-  .howto-item{display:grid; grid-template-columns:52px 1fr; grid-template-rows:auto auto; column-gap:6px; align-items:center;
+  .howto-item{display:grid; grid-template-columns:46px 1fr; grid-template-rows:min-content min-content; align-content:center; column-gap:6px; align-items:center;
     text-align:left; padding:4px 8px 4px 2px; border-radius:10px;}
-  .howto-item canvas{grid-row:1 / span 2; width:52px; height:36px;}
+  .howto-item canvas{grid-row:1 / span 2; width:46px; height:32px;}
   .howto-item .name{margin:0; font-size:13px; line-height:1.1;}
   .howto-item .tag{font-size:10.5px; line-height:1.2;}
   .howto-controls{margin-top:8px; gap:8px;}
   .howto-controls div{font-size:11.5px; padding:4px 10px;}
-  #screen-howto .footer-nav{margin-top:8px;}
+  #screen-howto .footer-nav{margin-top:4px;}
+  #screen-howto{padding-top:8px; padding-bottom:8px;}
 }
+
+.run-stats{font-size:12.5px; color:#ffe0b8; margin-bottom:6px;}
+.howto-tips{display:flex; flex-wrap:wrap; gap:6px 16px; justify-content:center; max-width:720px; margin-top:12px; font-size:12.5px; color:var(--snow);}
+.howto-tips b{color:var(--aurora); margin-right:4px;}
+@media (max-height:480px){ .howto-tips{margin-top:6px; font-size:10.5px; gap:2px 12px;} }

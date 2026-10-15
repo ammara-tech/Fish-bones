@@ -49,6 +49,11 @@ const Sound = (function(){
     shield:   ()=>{ tone(500,0.1,'sine',0.15); tone(750,0.15,'sine',0.12,0.08); },
     count:    ()=>tone(660,0.12,'triangle',0.14),
     go:       ()=>{ tone(990,0.18,'triangle',0.16); tone(1320,0.22,'triangle',0.12,0.06); },
+    combo:    ()=>[784,988,1175].forEach((f,i)=>tone(f,0.1,'triangle',0.13,i*0.05)),
+    golden:   ()=>[1047,1319,1568,2093].forEach((f,i)=>tone(f,0.14,'sine',0.14,i*0.05)),
+    closeCall:()=>{ tone(600,0.08,'triangle',0.12); tone(900,0.12,'triangle',0.12,0.06); },
+    freeze:   ()=>{ tone(1800,0.3,'sine',0.1,0,600); tone(1200,0.35,'triangle',0.08,0.05,400); },
+    wave:     ()=>[523,659,784,1047].forEach((f,i)=>tone(f,0.18,'triangle',0.15,i*0.09)),
     gameover: ()=>[400,340,280,200,140].forEach((f,i)=>tone(f,0.25,'sawtooth',0.16,i*0.12)),
   };
   function sfx(name){ if(SFX[name]) SFX[name](); }

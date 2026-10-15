@@ -108,16 +108,16 @@
       <canvas id="gameCanvas"></canvas>
       <div id="warnFlash"></div>
       <div id="countdown" aria-live="assertive"></div>
+      <div id="waveBanner" aria-live="polite"><div class="wave-title"></div><div class="wave-sub"></div></div>
       <div id="hud">
         <div class="hud-panel">
           <div class="hud-score">Score: <span id="scoreP1">0</span></div>
           <div class="hud-lives" id="livesP1"></div>
-          <div class="powerup-indicators">
-            <div class="pu-chip" id="chip-shield">Shield</div>
-            <div class="pu-chip" id="chip-magnet">Magnet</div>
-            <div class="pu-chip" id="chip-slow">Slow-mo</div>
-            <div class="pu-chip" id="chip-mult">x2</div>
+          <div class="hud-meta">
+            <span id="hudWave">Wave 1</span>
+            <span id="hudCombo" class="hud-combo"></span>
           </div>
+          <div class="powerup-indicators" id="powerupChips"></div>
         </div>
         <div class="hud-buttons">
           <button class="iconbtn mute-toggle" id="muteBtnGame" title="Mute (M)">🔊</button>
@@ -157,6 +157,11 @@
     <h2 class="screen-title">How to Play</h2>
     <p class="screen-desc">Eat fish, dodge everything else, and survive as long as you can.</p>
     <div class="howto-grid" id="howtoGrid"></div>
+    <div class="howto-tips">
+      <span><b>Combos</b> 5 fish in a row = x2, 10 = x3 (bones &amp; hits reset it)</span>
+      <span><b>Close calls</b> dodge a predator by a whisker for bonus points</span>
+      <span><b>Waves</b> every 30s it gets faster — plus a wave bonus</span>
+    </div>
     <div class="howto-controls">
       <div><strong>Keyboard</strong>↑ / ↓ swim · ← / → dash · Esc or P pause · M mute</div>
       <div><strong>Touch</strong>Joystick to swim · ◀◀ / ▶▶ buttons to dash</div>
@@ -174,6 +179,7 @@
         <p class="title-main small" id="gameoverHeadline">Game Over</p>
         <div class="finalscore" id="finalScore">0</div>
         <div class="result-line" id="resultLine"></div>
+        <div class="run-stats" id="runStats"></div>
         <div class="highscore" id="highscoreLine"></div>
         <div class="new-best hidden" id="newBestBadge">★ New best! ★</div>
       </div>

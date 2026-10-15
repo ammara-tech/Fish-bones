@@ -28,20 +28,35 @@ const DIFFICULTIES = [
 ];
 
 const DIFF_PARAMS = {
-  easy:    {fishSpeed:150, predSpeed:170, fishRate:0.95, obsRate:0.6,  predRate:0.42, lives:4, boneRatio:0.30, warnTime:0.85},
-  medium:  {fishSpeed:195, predSpeed:225, fishRate:1.15, obsRate:0.85, predRate:0.65, lives:3, boneRatio:0.36, warnTime:0.65},
-  hard:    {fishSpeed:200, predSpeed:250, fishRate:1.35, obsRate:1.1,  predRate:0.9,  lives:2, boneRatio:0.40, warnTime:0.5},
-  extreme: {fishSpeed:285, predSpeed:350, fishRate:1.55, obsRate:1.35, predRate:1.2,  lives:1, boneRatio:0.46, warnTime:0.38},
-  boss:    {fishSpeed:185, predSpeed:210, fishRate:1.2,  obsRate:0.85, predRate:0.6,  lives:2, boneRatio:0.36, warnTime:0.55, isBoss:true},
+  easy:    {fishSpeed:150, predSpeed:170, fishRate:0.95, obsRate:0.6,  predRate:0.42, lives:4, boneRatio:0.30, pufferRatio:0.06, warnTime:0.85},
+  medium:  {fishSpeed:195, predSpeed:225, fishRate:1.15, obsRate:0.85, predRate:0.65, lives:3, boneRatio:0.36, pufferRatio:0.09, warnTime:0.65},
+  hard:    {fishSpeed:200, predSpeed:250, fishRate:1.35, obsRate:1.1,  predRate:0.9,  lives:2, boneRatio:0.40, pufferRatio:0.12, warnTime:0.5},
+  extreme: {fishSpeed:285, predSpeed:350, fishRate:1.55, obsRate:1.35, predRate:1.2,  lives:1, boneRatio:0.46, pufferRatio:0.15, warnTime:0.38},
+  boss:    {fishSpeed:185, predSpeed:210, fishRate:1.2,  obsRate:0.85, predRate:0.6,  lives:2, boneRatio:0.36, pufferRatio:0.09, warnTime:0.55, isBoss:true},
 };
+
+/* ---- Waves: every WAVE_LENGTH seconds things get faster and busier ---- */
+const WAVE_LENGTH = 30;        // seconds per wave
+const WAVE_BONUS = 5;          // bonus points per wave reached (wave 3 → +10)
+function waveAt(elapsedSec){ return 1 + Math.floor(elapsedSec/WAVE_LENGTH); }
+// +20% speed & spawn rate per wave, capped at +80% (wave 5)
+function getIntensity(elapsedSec){ return 1 + Math.min((waveAt(elapsedSec)-1)*0.2, 0.8); }
+
+/* ---- Combos: every 5 fish in a row without a bone or hit raises the multiplier ---- */
+const COMBO_STEP = 5;
+const COMBO_MAX = 3;           // highest combo multiplier
+function comboMultiplier(combo){ return Math.min(COMBO_MAX, 1 + Math.floor(combo/COMBO_STEP)); }
+
+/* ---- Special fish ---- */
+const GOLDEN_FISH = {chance:0.05, value:10, speedMul:1.8};
+const CLOSE_CALL = {margin:26, points:3, bossPoints:5}; // dodge within `margin` px for a bonus
+
+const POWERUP_DURATIONS = {shield:8, magnet:6, slow:5, mult:8, speed:6, freeze:4};
 
 // Boss level: 1 giant predator from the start, a 2nd at 25 points, a 3rd at 50.
 const BOSS_SCORE_THRESHOLDS = [0, 25, 50];
 
 function findById(list, id){ return list.find(x=>x.id===id) || list[0]; }
-
-// Runs get gradually harder: up to +60% speed & spawn rate after ~70s.
-function getIntensity(elapsedSec){ return 1 + Math.min(elapsedSec/70, 0.6); }
 
 function rand(a,b){ return a+Math.random()*(b-a); }
 function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }

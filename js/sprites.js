@@ -105,6 +105,57 @@ function drawFish(ctx, x, y, hue){
   ctx.restore();
 }
 
+// Rare, fast and worth 10 — shimmers as it swims
+function drawGoldenFish(ctx, x, y, t){
+  ctx.save(); ctx.translate(x,y);
+  ctx.shadowColor='rgba(255,215,90,.9)'; ctx.shadowBlur=14;
+  const g = ctx.createLinearGradient(-14,-9,14,9);
+  g.addColorStop(0,'#fff3b0'); g.addColorStop(.5,'#ffcf3f'); g.addColorStop(1,'#e59a12');
+  ctx.fillStyle=g;
+  ctx.beginPath(); ctx.ellipse(0,0,15,9,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-13,0); ctx.lineTo(-23,-8); ctx.lineTo(-23,8); ctx.fill();
+  ctx.shadowBlur=0;
+  ctx.fillStyle='#5a3a00'; ctx.beginPath(); ctx.arc(6,-2,1.8,0,Math.PI*2); ctx.fill();
+  // moving glint
+  ctx.globalAlpha = 0.5+0.5*Math.sin(t*6);
+  ctx.fillStyle='#fff';
+  ctx.beginPath(); ctx.moveTo(-3,-10); ctx.lineTo(-1,-5); ctx.lineTo(4,-4); ctx.lineTo(-1,-3); ctx.lineTo(-3,2); ctx.lineTo(-5,-3); ctx.lineTo(-10,-4); ctx.lineTo(-5,-5); ctx.fill();
+  ctx.restore();
+}
+
+// Looks a lot like a normal fish until you get close — then it puffs up into a spiky ball.
+// puff: 0 (calm) .. 1 (fully puffed)
+function drawPuffer(ctx, x, y, puff){
+  ctx.save(); ctx.translate(x,y);
+  const rx = 13 + puff*9, ry = 8 + puff*14;
+  if(puff>0.05){
+    ctx.strokeStyle='#f5f0d6'; ctx.lineWidth=2; ctx.lineCap='round';
+    for(let i=0;i<14;i++){
+      const a = i/14*Math.PI*2, len = 7*puff;
+      const ex = Math.cos(a)*rx, ey = Math.sin(a)*ry;
+      ctx.beginPath(); ctx.moveTo(ex,ey); ctx.lineTo(ex+Math.cos(a)*len, ey+Math.sin(a)*len); ctx.stroke();
+    }
+  }
+  ctx.fillStyle='#e8d27a';
+  ctx.beginPath(); ctx.ellipse(0,0,rx,ry,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(-rx+1,0); ctx.lineTo(-rx-7,-6); ctx.lineTo(-rx-7,6); ctx.fill();
+  ctx.fillStyle='#8a6a2a'; // tell-tale spots
+  [[-5,-3],[1,3],[-1,-6],[-7,3]].forEach(([sx,sy])=>{ ctx.beginPath(); ctx.arc(sx*(1+puff*0.6), sy*(1+puff*0.9), 1.6+puff, 0, Math.PI*2); ctx.fill(); });
+  ctx.fillStyle='#fff'; ctx.beginPath(); ctx.arc(rx*0.45,-ry*0.3,2.6+puff,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(rx*0.45+0.6,-ry*0.3,1.3+puff*0.5,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
+// Icy shell drawn over a predator frozen by the Freeze power-up
+function drawFrozenShell(ctx, x, y, w, h){
+  ctx.save();
+  ctx.fillStyle='rgba(200,240,255,.45)'; ctx.strokeStyle='rgba(255,255,255,.8)'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.ellipse(x,y,w*0.62,h*0.9,0,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.7)';
+  ctx.beginPath(); ctx.ellipse(x-w*0.25,y-h*0.45,w*0.12,h*0.18,-0.5,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
 function drawBone(ctx, x, y){
   ctx.save(); ctx.translate(x,y);
   ctx.strokeStyle=ctx.fillStyle='#e6e6e0'; ctx.lineWidth=5; ctx.lineCap='round';
@@ -137,6 +188,8 @@ const POWERUP_STYLE = {
   magnet:{color:'#e85b5b', glyph:'M',  name:'Magnet',   info:'Pulls nearby fish to you'},
   slow:  {color:'#9b6bff', glyph:'Z',  name:'Slow-mo',  info:'Slows everything down'},
   mult:  {color:'#f0e090', glyph:'x2', name:'Double',   info:'Double points — bones too!'},
+  speed: {color:'#ffb36b', glyph:'»',  name:'Speed',    info:'Swim much faster'},
+  freeze:{color:'#e6f7ff', glyph:'❄',  name:'Freeze',   info:'Predators freeze solid'},
 };
 function drawPowerup(ctx, pu){
   const style = POWERUP_STYLE[pu.kind];

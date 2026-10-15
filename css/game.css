@@ -86,3 +86,24 @@
 @media (prefers-reduced-motion: reduce){
   #countdown.pop{animation:none;}
 }
+
+/* ---- Wave + combo line in the HUD ---- */
+.hud-meta{display:flex; gap:10px; align-items:baseline; margin-top:4px; font-size:13px; font-weight:700; color:var(--ice);}
+.hud-combo{color:var(--snow);}
+.hud-combo.hot{color:var(--amber); text-shadow:0 0 8px rgba(240,168,87,.6);}
+.pu-chip{background:color-mix(in srgb, var(--chip, var(--aurora)) 25%, transparent); border-color:var(--chip, var(--aurora));}
+
+/* ---- "Wave 3" banner ---- */
+#waveBanner{position:absolute; left:50%; top:22%; transform:translate(-50%,-20px); opacity:0; pointer-events:none; z-index:5;
+  text-align:center; padding:10px 28px; border-radius:14px;
+  background:linear-gradient(180deg,var(--wood-light),var(--wood) 55%, var(--wood-dark)); border:4px solid var(--wood-dark);
+  box-shadow:0 12px 26px rgba(0,0,0,.45);}
+#waveBanner.show{animation:bannerIn 2.4s ease forwards;}
+#waveBanner .wave-title{font-family:var(--font-display); font-weight:800; font-size:clamp(26px,5vw,40px); line-height:1.1; text-shadow:0 3px 0 #2c1c11;}
+#waveBanner .wave-sub{font-size:13px; color:#ffe0b8; font-weight:700;}
+@keyframes bannerIn{
+  0%{opacity:0; transform:translate(-50%,-20px);}
+  12%,80%{opacity:1; transform:translate(-50%,0);}
+  100%{opacity:0; transform:translate(-50%,-10px);}
+}
+@media (max-height:480px){ #waveBanner{top:16%; padding:6px 18px;} .hud-meta{font-size:11px;} }
