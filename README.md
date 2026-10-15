@@ -1,0 +1,29 @@
+# An Icy Cuisine — Fish Bones
+
+A small arcade game in plain HTML, CSS and JavaScript. Swim up and down to catch fish, dodge bones, glaciers and predators.
+
+Open `index.html` in a browser to play — no build step needed.
+
+## Controls
+- **Desktop:** ↑ / ↓ to swim, ← / → to dash, Esc or P to pause
+- **Mobile:** joystick on the left, dash buttons on the right (play in landscape)
+
+## Project layout
+```
+index.html        page structure (all screens)
+css/
+  base.css        colours, screens, buttons
+  menus.css       title sign, selection cards, game-over
+  game.css        game screen, HUD, touch controls
+js/               loaded in this order:
+  data.js         characters, difficulty tuning, player setup, high score
+  audio.js        sound effects + generated music (Web Audio)
+  sprites.js      canvas drawings of every character and item
+  screens.js      screen switching, viewport helpers
+  input.js        keyboard + touch joystick
+  game.js         game loop: spawning, collisions, drawing
+  menus.js        menu flow and buttons
+  main.js         boot
+```
+
+© Ammara Badat 2026

@@ -5,8 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Icy Cuisine — Fish Bones</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐟</text></svg>">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/menus.css">
+<link rel="stylesheet" href="css/game.css">
 </head>
 <body>
 <div id="app">
@@ -39,7 +42,7 @@
 
   <!-- PLATFORM SELECT -->
   <div class="screen" id="screen-platform">
-    <div class="toprow"><button class="iconbtn" id="backFromPlatform">✕</button></div>
+    <div class="toprow"><button class="iconbtn" id="backFromPlatform" title="Back to title">✕</button></div>
     <h2 class="screen-title">Choose Your Platform</h2>
     <p class="screen-desc">Pick how you'll play — this changes the on-screen controls.</p>
     <div class="card-grid" id="platformGrid">
@@ -64,7 +67,7 @@
 
   <!-- PREY SELECT -->
   <div class="screen" id="screen-prey">
-    <div class="toprow"><button class="iconbtn" id="backFromPrey">✕</button></div>
+    <div class="toprow"><button class="iconbtn" id="backFromPrey" title="Back to title">✕</button></div>
     <h2 class="screen-title" id="preyTitleHeading">Choose Your Prey</h2>
     <p class="screen-desc" id="preySubDesc">Pick who braves the ice water. (Player 1)</p>
     <div class="card-grid" id="preyGrid"></div>
@@ -76,7 +79,7 @@
 
   <!-- PREDATOR SELECT -->
   <div class="screen" id="screen-predator">
-    <div class="toprow"><button class="iconbtn" id="backFromPred">✕</button></div>
+    <div class="toprow"><button class="iconbtn" id="backFromPred" title="Back to title">✕</button></div>
     <h2 class="screen-title" id="predTitleHeading">Choose Your Predator</h2>
     <p class="screen-desc" id="predSubDesc">Whoever hunts you across the ice. Tap Custom to allow multiple.</p>
     <div class="card-grid" id="predatorGrid"></div>
@@ -88,7 +91,7 @@
 
   <!-- DIFFICULTY SELECT -->
   <div class="screen" id="screen-difficulty">
-    <div class="toprow"><button class="iconbtn" id="backFromDiff">✕</button></div>
+    <div class="toprow"><button class="iconbtn" id="backFromDiff" title="Back to title">✕</button></div>
     <h2 class="screen-title">Adventure Level</h2>
     <p class="screen-desc">Higher levels mean faster predators, hungrier bone-fish, and thinner ice.</p>
     <div class="diff-grid" id="diffGrid"></div>
@@ -97,6 +100,7 @@
       <button class="btn amber" id="diffStart">Start Adventure 🐟</button>
     </div>
   </div>
+
   <!-- GAME SCREEN -->
   <div class="screen" id="screen-game">
     <div id="gameCanvasWrap">
@@ -113,7 +117,7 @@
             <div class="pu-chip" id="chip-mult">x2</div>
           </div>
         </div>
-        <button class="iconbtn" id="pauseBtnGame">⏸</button>
+        <button class="iconbtn" id="pauseBtnGame" title="Pause (Esc / P)">⏸</button>
       </div>
       <div id="touchControls">
         <div id="touchStick">
@@ -146,13 +150,13 @@
     <div class="sign-hang">
       <div class="ropes"><div class="rope"></div><div class="rope"></div></div>
       <div class="sign">
-        <p class="title-main" id="gameoverHeadline" style="font-size:clamp(26px,5vw,42px);">Game Over</p>
+        <p class="title-main small" id="gameoverHeadline">Game Over</p>
         <div class="finalscore" id="finalScore">0</div>
         <div class="result-line" id="resultLine"></div>
         <div class="highscore" id="highscoreLine"></div>
       </div>
     </div>
-    <div class="menu-actions" style="margin-top:26px;">
+    <div class="menu-actions">
       <button class="btn" id="retryBtn">Retry Same Setup</button>
       <button class="btn secondary" id="menuBtn">Main Menu</button>
     </div>
@@ -160,10 +164,14 @@
 
 </div>
 
-<script src="script.js"></script>
+<!-- Load order matters: each file uses things defined in the ones above it. -->
+<script src="js/data.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/screens.js"></script>
+<script src="js/input.js"></script>
+<script src="js/game.js"></script>
+<script src="js/menus.js"></script>
+<script src="js/main.js"></script>
 </body>
 </html>
-
-
-
-      
