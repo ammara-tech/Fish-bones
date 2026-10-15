@@ -19,4 +19,5 @@ window.addEventListener('orientationchange', onResize);
 
 setVH();
 Sound.startMusic('title');
+refreshTitle();
 show('screen-title');

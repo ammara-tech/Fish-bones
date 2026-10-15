@@ -23,11 +23,12 @@ const Game = (function(){
 
   let VW = 960, VH = 540;
   let running = false, paused = false, ended = false, rafId = null, lastT = 0;
-  let player = null, params = null;
+  let player = null, params = null, setup = null;
   let anim = 0;                        // always-running clock for character animation
   let fishes = [], bones = [], puffers = [], obstacles = [], predators = [], bosses = [], powerups = [], particles = [], floaters = [];
   let score = 0, elapsed = 0, wave = 1;
   let combo = 0, bestCombo = 0, fishEaten = 0, closeCalls = 0;
+  let bonesEaten = 0, goldenEaten = 0, powerupsTaken = new Set(), achievementTimer = 0;
   let shown = {score:-1, lives:-1, wave:-1, combo:-1};
   let timers = {fish:0, obs:0, pred:0, pu:0};
   let shake = 0;                       // screen-shake strength in px, fades out
@@ -46,13 +47,15 @@ const Game = (function(){
   }
 
   /* ---------------- Lifecycle ---------------- */
-  function start(){
-    params = DIFF_PARAMS[state.difficulty];
+  /* setup = {prey, predators, difficulty, twist?, daily?} — see menus.js */
+  function start(newSetup){
+    if(newSetup) setup = newSetup;
+    params = applyTwist(DIFF_PARAMS[setup.difficulty], setup.twist);
     show('screen-game');
     fitCanvas();
     Scenery.init(VW, VH);
 
-    const prey = findById(PREY_TYPES, state.prey);
+    const prey = findById(PREY_TYPES, setup.prey);
     const maxLives = params.lives + prey.stats.bonusLives;
     player = {
       preyId: prey.id, stats: prey.stats, r: prey.stats.radius,
@@ -65,6 +68,7 @@ const Game = (function(){
     powerups = []; particles = []; floaters = [];
     score = 0; elapsed = 0; wave = 1; shake = 0; anim = 0;
     combo = 0; bestCombo = 0; fishEaten = 0; closeCalls = 0;
+    bonesEaten = 0; goldenEaten = 0; powerupsTaken = new Set(); achievementTimer = 0;
     shown = {score:-1, lives:-1, wave:-1, combo:-1};
     countdownT = COUNT_STEP*3; goT = 0; shownCount = null;
     timers = {fish:0.4, obs:1.2, pred:1.6, pu:4};
@@ -122,10 +126,10 @@ const Game = (function(){
       bones.push({x:VW+30, y, r:14, sp:speed*rand(0.8,1.15), val:-(2+Math.floor(Math.random()*2)), wob:Math.random()*10});
     } else if(roll < params.boneRatio + params.pufferRatio){
       puffers.push({x:VW+30, y, sp:speed*rand(0.7,0.95), puff:0, wob:Math.random()*10});
-    } else if(Math.random() < GOLDEN_FISH.chance){
+    } else if(Math.random() < params.goldenChance){
       fishes.push({x:VW+30, y, r:15, sp:speed*GOLDEN_FISH.speedMul, val:GOLDEN_FISH.value, wob:0, golden:true, hue:'#ffcf3f'});
     } else {
-      fishes.push({x:VW+30, y, r:13, sp:speed*rand(0.8,1.2), val:1+Math.floor(Math.random()*3), wob:Math.random()*10,
+      fishes.push({x:VW+30, y, r:13, sp:speed*rand(0.8,1.2), val:(1+Math.floor(Math.random()*3))*params.fishValueMul, wob:Math.random()*10,
         hue: pick(['#8fd9e8','#5fe1b0','#f0e090','#f0a857'])});
     }
   }
@@ -133,7 +137,7 @@ const Game = (function(){
     obstacles.push({x:VW+40, y:rand(70,VH-70), w:rand(34,54), h:rand(50,90), sp:params.fishSpeed*0.85*getIntensity(elapsed)});
   }
   function spawnPredator(){
-    const type = findById(PREDATOR_TYPES, pick(state.predators.length ? state.predators : ['orca']));
+    const type = findById(PREDATOR_TYPES, pick(setup.predators.length ? setup.predators : ['orca']));
     const fromLeft = Math.random()<0.5;
     const y = rand(60, VH-60);
     predators.push({
@@ -148,7 +152,7 @@ const Game = (function(){
   }
   function spawnBoss(slot){
     const trailGap = VW*0.26 + slot*90;
-    const type = state.predators[slot % state.predators.length] || 'orca';
+    const type = setup.predators[slot % setup.predators.length] || 'orca';
     bosses.push({slot, type, trailGap, x:player.x-trailGap, y:player.y, r:70-slot*3,
       phase:'lurk', dir:-1, cool:rand(1.0,1.8), warnT:0, lungeT:0, minDist:Infinity, hit:false});
   }
@@ -247,7 +251,7 @@ const Game = (function(){
     timers.obs  -= dt; if(timers.obs<=0){ spawnObstacle(); timers.obs = rand(1.4,2.2)/(params.obsRate*intensity); }
     if(params.isBoss) updateBossSpawns();
     else if(!frozen){ timers.pred -= dt; if(timers.pred<=0){ spawnPredator(); timers.pred = rand(1.6,2.6)/(params.predRate*intensity); } }
-    timers.pu -= dt; if(timers.pu<=0){ spawnPowerup(); timers.pu = rand(7,11); }
+    timers.pu -= dt; if(timers.pu<=0){ spawnPowerup(); timers.pu = rand(7,11)*params.powerupEvery; }
 
     // good fish (magnet pulls them in)
     for(let i=fishes.length-1;i>=0;i--){
@@ -263,6 +267,7 @@ const Game = (function(){
       const b = bones[i]; b.x -= b.sp*slow*dt; b.wob += dt*4;
       if(Math.hypot(b.x-p.x, b.y-p.y) < b.r+p.r){
         addPoints(b.val, b.x, b.y);
+        bonesEaten++;
         breakCombo();
         spawnParticles(b.x,b.y,'#e0e0e0',6); Sound.sfx('eatBad'); bones.splice(i,1);
       }
@@ -314,6 +319,7 @@ const Game = (function(){
       const pu = powerups[i]; pu.x -= pu.sp*dt; pu.bob += dt*3;
       if(Math.hypot(pu.x-p.x, pu.y-p.y) < pu.r+p.r){
         p[pu.kind+'T'] = POWERUP_DURATIONS[pu.kind];
+        powerupsTaken.add(pu.kind);
         addFloater(pu.x, pu.y-10, POWERUP_STYLE[pu.kind].name+'!', POWERUP_STYLE[pu.kind].color);
         Sound.sfx(pu.kind==='freeze' ? 'freeze' : 'powerup');
         powerups.splice(i,1);
@@ -322,6 +328,20 @@ const Game = (function(){
     }
     updateEffects(dt);
     updateHUD();
+
+    // check for achievements twice a second so they pop up mid-run
+    achievementTimer -= dt;
+    if(achievementTimer<=0){ achievementTimer = 0.5; Progress.check(runStats()).forEach(announceAchievement); }
+  }
+
+  function runStats(){
+    return {score, wave, elapsed, fishEaten, bestCombo, closeCalls, bonesEaten, goldenEaten,
+      powerupsTaken:[...powerupsTaken], difficulty:setup.difficulty, daily:!!setup.daily, finished:false};
+  }
+  function announceAchievement(a){
+    const reward = a.unlocks ? ` — unlocked ${findById(PREY_TYPES.concat(PREDATOR_TYPES), a.unlocks).name}!` : '';
+    toast(`<span class="toast-icon">${a.icon}</span><span><b>${a.name}</b><br>${a.desc}${reward}</span>`);
+    Sound.sfx('achievement');
   }
 
   // Bosses shadow the prey, then surprise-lunge at their exact spot.
@@ -375,7 +395,7 @@ const Game = (function(){
       addFloater(player.x, player.y-44, `Combo x${mult}!`, '#f0a857', true);
       Sound.sfx('combo');
     }
-    if(f.golden){ spawnParticles(f.x,f.y,'#ffcf3f',16); Sound.sfx('golden'); }
+    if(f.golden){ goldenEaten++; spawnParticles(f.x,f.y,'#ffcf3f',16); Sound.sfx('golden'); }
     else { spawnParticles(f.x,f.y,f.hue,6); Sound.sfx('eatGood'); }
   }
 
@@ -469,15 +489,30 @@ const Game = (function(){
     updateHUD();
     stop();
     Sound.sfx('gameover');
-    const level = findById(DIFFICULTIES, state.difficulty);
-    const {best, isNew} = HighScore.submit(level.id, score);
-    const newBest = isNew && score>0;
+    const level = findById(DIFFICULTIES, setup.difficulty);
+    const preyName = findById(PREY_TYPES, setup.prey).name;
+    let newBest, bestText;
+    if(setup.daily){
+      const before = Progress.dailyBest();
+      newBest = score>before;
+      bestText = `Today's best: ${Math.max(before, score)}`;
+    } else {
+      const result = HighScore.submit(level.id, score);
+      newBest = result.isNew;
+      bestText = `Best on ${level.name}: ${result.best}`;
+    }
+    newBest = newBest && score>0;
+    Progress.finishRun(runStats()).forEach(announceAchievement);
+
     $id('gameoverHeadline').textContent = newBest ? 'New Best!' : 'Game Over';
     $id('finalScore').textContent = score;
-    $id('resultLine').textContent = `${level.name} · ${findById(PREY_TYPES, state.prey).name} · reached wave ${wave}`;
+    $id('resultLine').textContent = setup.daily
+      ? `Daily challenge · ${setup.twist.name} · reached wave ${wave}`
+      : `${level.name} · ${preyName} · reached wave ${wave}`;
     $id('runStats').textContent = `${fishEaten} fish · best combo ${bestCombo} · ${closeCalls} close call${closeCalls===1?'':'s'}`;
-    $id('highscoreLine').textContent = `Best on ${level.name}: ${best}`;
+    $id('highscoreLine').textContent = bestText;
     $id('newBestBadge').classList.toggle('hidden', !newBest);
+    $id('shareDailyBtn').classList.toggle('hidden', !setup.daily);
     show('screen-gameover');
   }
 
@@ -564,6 +599,8 @@ const Game = (function(){
 
   return {
     start, stop, togglePause, fitCanvas,
+    restart(){ start(); },
+    get setup(){ return setup; },
     get running(){ return running; },
     get paused(){ return paused; },
     // read-only snapshot, handy for debugging in the browser console

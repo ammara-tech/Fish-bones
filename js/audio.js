@@ -54,6 +54,8 @@ const Sound = (function(){
     closeCall:()=>{ tone(600,0.08,'triangle',0.12); tone(900,0.12,'triangle',0.12,0.06); },
     freeze:   ()=>{ tone(1800,0.3,'sine',0.1,0,600); tone(1200,0.35,'triangle',0.08,0.05,400); },
     wave:     ()=>[523,659,784,1047].forEach((f,i)=>tone(f,0.18,'triangle',0.15,i*0.09)),
+    achievement:()=>[659,784,988,1319].forEach((f,i)=>tone(f,0.16,'triangle',0.14,i*0.08)),
+    locked:   ()=>tone(180,0.12,'square',0.08),
     gameover: ()=>[400,340,280,200,140].forEach((f,i)=>tone(f,0.25,'sawtooth',0.16,i*0.12)),
   };
   function sfx(name){ if(SFX[name]) SFX[name](); }

@@ -20,3 +20,12 @@ function updateRotateHint(){
   const needed = state.platform==='mobile' && isScreenActive('screen-game') && portrait;
   document.getElementById('rotateHint').classList.toggle('show', needed);
 }
+
+/* Little pop-up message at the top of the screen (used for achievements) */
+function toast(html, ms){
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = html;
+  document.getElementById('toastStack').appendChild(el);
+  setTimeout(()=>{ el.classList.add('out'); setTimeout(()=>el.remove(), 400); }, ms||3600);
+}
