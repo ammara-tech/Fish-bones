@@ -109,7 +109,7 @@
 .new-best{display:inline-block; margin-top:4px; padding:3px 12px; border-radius:20px; font-weight:800; font-size:14px;
   background:var(--amber); color:#3a2312; animation:bestPulse 1.2s ease-in-out infinite;}
 @keyframes bestPulse{0%,100%{transform:scale(1);} 50%{transform:scale(1.08);}}
-@media (prefers-reduced-motion: reduce){ .new-best{animation:none;} }
+.reduce-motion .new-best, .reduce-motion .sign{animation:none;}
 
 /* ---- How to Play ---- */
 .howto-grid{display:grid; grid-template-columns:repeat(4, 150px); gap:12px; justify-content:center;}
@@ -117,7 +117,7 @@
 .howto-item canvas{width:120px; height:84px; display:block; margin:0 auto;}
 .howto-item .name{font-family:var(--font-display); font-weight:700; font-size:15px; margin-top:4px;}
 .howto-item .tag{font-size:12px; color:var(--ice); line-height:1.35; margin-top:2px;}
-.howto-controls{display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:16px; max-width:640px;}
+.howto-controls{display:flex; gap:12px; flex-wrap:wrap; justify-content:center; margin-top:10px; max-width:860px;}
 .howto-controls div{font-size:13px; padding:8px 14px; border-radius:12px; background:rgba(8,25,43,.55); border:1px solid rgba(255,255,255,.15);}
 .howto-controls strong{display:block; font-family:var(--font-display); color:var(--amber); font-size:14px;}
 @media (min-width:1000px) and (min-height:481px){
@@ -142,7 +142,7 @@
   #screen-howto{padding-top:8px; padding-bottom:8px;}
 }
 
-.run-stats{font-size:12.5px; color:#ffe0b8; margin-bottom:6px;}
+.run-stats{font-size:12.5px; color:#ffe0b8; margin-bottom:6px; white-space:pre-line;}
 .howto-tips{display:flex; flex-wrap:wrap; gap:6px 16px; justify-content:center; max-width:720px; margin-top:12px; font-size:12.5px; color:var(--snow);}
 .howto-tips b{color:var(--aurora); margin-right:4px;}
 @media (max-height:480px){ .howto-tips{margin-top:6px; font-size:10.5px; gap:2px 12px;} }
@@ -210,4 +210,39 @@
   #screen-title .credit-board p:first-child{font-size:12px;}
   .ach-grid{grid-template-columns:repeat(4, 1fr);}
   .ach-reward{font-size:10px;}
+}
+
+/* ---- Settings ---- */
+.settings-card{display:flex; flex-direction:column; gap:4px; width:min(560px,94vw); padding:10px 18px; border-radius:16px;
+  background:rgba(8,25,43,.55); border:2px solid rgba(255,255,255,.15); text-align:left;}
+.setting{display:flex; align-items:center; gap:14px; padding:10px 0; border-bottom:1px solid rgba(255,255,255,.08); cursor:pointer;}
+.setting:last-child{border-bottom:none;}
+.setting-name{flex:0 0 170px; font-family:var(--font-display); font-weight:700; font-size:15px;}
+.setting-name small{display:block; font-family:'Nunito',sans-serif; font-weight:600; font-size:11px; color:var(--ice);}
+.setting input[type=range]{flex:1; accent-color:var(--aurora); height:28px;}
+.setting-value{width:44px; text-align:right; font-weight:800; color:var(--aurora); font-size:14px;}
+/* toggle switch */
+.setting.toggle input{position:absolute; opacity:0; pointer-events:none;}
+.switch{margin-left:auto; width:46px; height:26px; border-radius:13px; background:rgba(255,255,255,.2); position:relative; transition:.2s;}
+.switch::after{content:''; position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; transition:.2s;}
+.setting.toggle input:checked + .switch{background:var(--aurora);}
+.setting.toggle input:checked + .switch::after{left:23px;}
+.setting.toggle input:focus-visible + .switch{outline:2px solid var(--ice); outline-offset:2px;}
+.controls-list{cursor:default; align-items:flex-start;}
+.controls-list > div{font-size:12.5px; line-height:1.7;}
+.controls-list b{color:var(--amber); margin-right:6px;}
+.danger-zone{cursor:default;}
+.danger-zone .btn{margin-left:auto; font-size:14px; padding:8px 14px;}
+@media (max-height:480px){
+  #screen-settings h2.screen-title{font-size:22px;}
+  .settings-card{padding:2px 14px;}
+  .setting{padding:4px 0;}
+  .setting-name{font-size:13px; flex-basis:150px;}
+  .controls-list > div{font-size:11px; line-height:1.45;}
+  #screen-settings .footer-nav{margin-top:8px;}
+}
+@media (max-width:520px){ .setting-name{flex-basis:120px;} }
+@media (max-height:480px){
+  .howto-controls div:nth-child(2){display:none;}  /* 2-player keys are also listed in Settings */
+  .setting{padding:3px 0;}
 }

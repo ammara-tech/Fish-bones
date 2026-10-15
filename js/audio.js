@@ -4,7 +4,12 @@
    with the Web Audio API (no audio files needed).
    ===================================================================== */
 const Sound = (function(){
-  let ctx = null, muted = false, musicTimer = null, musicGain = null, pads = null, currentKind = null;
+  let ctx = null, muted = false, musicTimer = null, musicGain = null, pads = null, currentKind = null, musicLevel = 0.1;
+
+  // Volume sliders in Settings take effect straight away
+  Settings.onChange(key=>{
+    if(key==='music' && musicGain && ctx) musicGain.gain.setTargetAtTime(musicLevel*Settings.get('music')/100 + 0.0001, ctx.currentTime, 0.05);
+  });
 
   function ac(){
     if(!ctx){
@@ -32,7 +37,7 @@ const Sound = (function(){
     osc.frequency.setValueAtTime(freq, t0);
     if(glideTo) osc.frequency.exponentialRampToValueAtTime(glideTo, t0+dur);
     gain.gain.setValueAtTime(0, t0);
-    gain.gain.linearRampToValueAtTime(vol||0.15, t0+0.02);
+    gain.gain.linearRampToValueAtTime((vol||0.15)*Settings.get('sfx')/100 + 0.0001, t0+0.02);
     gain.gain.exponentialRampToValueAtTime(0.001, t0+dur);
     osc.connect(gain).connect(ctx.destination);
     osc.start(t0); osc.stop(t0+dur+0.05);
@@ -70,7 +75,8 @@ const Sound = (function(){
 
     musicGain = ctx.createGain();
     musicGain.gain.setValueAtTime(0, now);
-    musicGain.gain.linearRampToValueAtTime(game ? 0.10 : 0.13, now+1.2);
+    musicLevel = game ? 0.10 : 0.13;
+    musicGain.gain.linearRampToValueAtTime(musicLevel*Settings.get('music')/100 + 0.0001, now+1.2);
     musicGain.connect(ctx.destination);
 
     const base = game ? 110 : 98;

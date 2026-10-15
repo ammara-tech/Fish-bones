@@ -123,8 +123,14 @@ const Progress = (function(){
     return (data.lastDaily===key || data.lastDaily===yesterday) ? data.streak : 0;
   }
 
+  // Wipe achievements, unlocks, daily results and every level's best score
+  function reset(){
+    data = blank(); save();
+    DIFFICULTIES.forEach(d=>{ try{ localStorage.removeItem(HighScore.key(d.id)); }catch(e){} });
+  }
+
   return {
-    ACHIEVEMENTS, has, check, finishRun, isUnlocked, unlockFor,
+    ACHIEVEMENTS, has, check, finishRun, isUnlocked, unlockFor, reset,
     dailySetup, dailyBest, streak, todayKey,
     count: ()=>Object.keys(data.achievements).length,
   };

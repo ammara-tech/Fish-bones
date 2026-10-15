@@ -27,21 +27,37 @@ function toggleMute(){
 document.querySelectorAll('.mute-toggle').forEach(btn=>btn.addEventListener('click', toggleMute));
 
 /* ---- Title ---- */
-on('playBtn',   ()=>{ Sound.sfx('select'); state.customMode = false; openPlatformSelect(); });
-on('customBtn', ()=>{ Sound.sfx('select'); state.customMode = true;  openPlatformSelect(); });
+on('playBtn',   ()=>{ Sound.sfx('select'); state.customMode = false; state.twoPlayer = false; openPlatformSelect(); });
+on('customBtn', ()=>{ Sound.sfx('select'); state.customMode = true;  state.twoPlayer = false; openPlatformSelect(); });
+// Two players share one keyboard, so the platform screen is skipped
+on('twoPlayerBtn', ()=>{
+  Sound.sfx('select');
+  state.customMode = false; state.twoPlayer = true;
+  if(isTouchDevice) toast('👥 Two-player mode needs a keyboard: P1 uses the arrow keys, P2 uses W A S D.', 4200);
+  sanitizePicks();
+  openPreySelect(1);
+});
 
 ['backFromPlatform','backFromPrey','backFromPred','backFromDiff','platformBack'].forEach(id=>on(id, backToTitle));
-on('preyBack', ()=>show('screen-platform'));
+on('preyBack', ()=>{
+  if(state.twoPlayer && state.preyStep===2) openPreySelect(1);
+  else if(state.twoPlayer) backToTitle();
+  else show('screen-platform');
+});
 on('predBack', ()=>show('screen-prey'));
 on('diffBack', ()=>show('screen-predator'));
 
 /* ---- Platform ---- */
 function openPlatformSelect(){
-  // make sure the remembered picks are characters the player has unlocked
+  sanitizePicks();
+  renderPlatformCards(); show('screen-platform');
+}
+// make sure the remembered picks are characters the player has unlocked
+function sanitizePicks(){
   if(!Progress.isUnlocked(state.prey)) state.prey = 'penguin';
+  if(!Progress.isUnlocked(state.prey2)) state.prey2 = 'penguin';
   state.predators = state.predators.filter(Progress.isUnlocked);
   if(!state.predators.length) state.predators = ['orca'];
-  renderPlatformCards(); show('screen-platform');
 }
 function renderPlatformCards(){
   $('platformDesktop').classList.toggle('selected', state.platform==='desktop');
@@ -49,7 +65,19 @@ function renderPlatformCards(){
 }
 on('platformDesktop', ()=>{ Sound.sfx('select'); state.platform='desktop'; renderPlatformCards(); });
 on('platformMobile',  ()=>{ Sound.sfx('select'); state.platform='mobile';  renderPlatformCards(); });
-on('platformNext',    ()=>{ Sound.sfx('click'); renderCharacterGrid('prey'); show('screen-prey'); });
+on('platformNext',    ()=>{ Sound.sfx('click'); openPreySelect(1); });
+
+/* step 1 = Player 1 (or solo), step 2 = Player 2 in two-player mode */
+function openPreySelect(step){
+  state.preyStep = step;
+  $('preyTitleHeading').textContent = !state.twoPlayer ? 'Choose Your Prey'
+    : step===1 ? 'Player 1: Choose Your Prey' : 'Player 2: Choose Your Prey';
+  $('preySubDesc').textContent = !state.twoPlayer ? 'Pick who braves the ice water.'
+    : step===1 ? 'Player 1 swims with the arrow keys.' : 'Player 2 swims with W A S D.';
+  renderCharacterGrid('prey');
+  show('screen-prey');
+}
+const preyKey = ()=>state.twoPlayer && state.preyStep===2 ? 'prey2' : 'prey';
 
 /* ---- Prey & predator character cards ---- */
 function characterCard(kind, item, selected, onPick){
@@ -74,9 +102,9 @@ function renderCharacterGrid(kind){
   const grid = $(isPrey ? 'preyGrid' : 'predatorGrid');
   grid.innerHTML = '';
   (isPrey ? PREY_TYPES : PREDATOR_TYPES).forEach(item=>{
-    const selected = isPrey ? state.prey===item.id : state.predators.includes(item.id);
+    const selected = isPrey ? state[preyKey()]===item.id : state.predators.includes(item.id);
     grid.appendChild(characterCard(kind, item, selected, ()=>{
-      if(isPrey) state.prey = item.id;
+      if(isPrey) state[preyKey()] = item.id;
       else togglePredator(item.id);
       renderCharacterGrid(kind);
     }));
@@ -89,7 +117,11 @@ function togglePredator(id){
   else if(state.predators.length>1) state.predators = state.predators.filter(x=>x!==id);
 }
 
-on('preyNext', ()=>{ Sound.sfx('click'); openPredatorSelect(); });
+on('preyNext', ()=>{
+  Sound.sfx('click');
+  if(state.twoPlayer && state.preyStep===1) openPreySelect(2);
+  else openPredatorSelect();
+});
 
 function openPredatorSelect(){
   if(!state.customMode) state.predators = [state.predators[0] || 'orca'];
@@ -120,7 +152,8 @@ function renderDiffGrid(){
 }
 on('diffStart', ()=>{
   Sound.sfx('click');
-  Game.start({prey:state.prey, predators:[...state.predators], difficulty:state.difficulty});
+  Game.start({prey:state.prey, prey2: state.twoPlayer ? state.prey2 : null,
+    predators:[...state.predators], difficulty:state.difficulty});
 });
 
 /* ---- Daily challenge ---- */
@@ -182,6 +215,36 @@ on('achievementsBtn', ()=>{ Sound.sfx('select'); openAchievements(); });
 on('achDone',    backToTitle);
 on('backFromAch', backToTitle);
 
+/* ---- Settings ---- */
+let settingsReturnTo = 'screen-title';
+function openSettings(returnTo){
+  settingsReturnTo = returnTo;
+  $('setMusic').value = Settings.get('music');
+  $('setSfx').value = Settings.get('sfx');
+  $('setMotion').checked = reduceMotion();
+  showVolumes();
+  show('screen-settings');
+}
+function showVolumes(){
+  $('setMusicVal').textContent = Settings.get('music')+'%';
+  $('setSfxVal').textContent = Settings.get('sfx')+'%';
+}
+function closeSettings(){ Sound.sfx('click'); show(settingsReturnTo); }
+$('setMusic').addEventListener('input', e=>{ Settings.set('music', Number(e.target.value)); showVolumes(); });
+$('setSfx').addEventListener('input', e=>{ Settings.set('sfx', Number(e.target.value)); showVolumes(); });
+$('setSfx').addEventListener('change', ()=>Sound.sfx('eatGood')); // play a sample at the new volume
+$('setMotion').addEventListener('change', e=>Settings.set('reduceMotion', e.target.checked));
+on('resetProgressBtn', ()=>{
+  if(!confirm('Reset all progress? Best scores, achievements, unlocked characters and daily results will be cleared.')) return;
+  Progress.reset();
+  refreshTitle();
+  toast('♻️ Progress reset — fresh ice!', 2400);
+});
+on('settingsBtn',       ()=>{ Sound.sfx('select'); openSettings('screen-title'); });
+on('settingsFromPause', ()=>{ Sound.sfx('click');  openSettings('screen-pause'); });
+on('settingsDone',      closeSettings);
+on('backFromSettings',  closeSettings);
+
 /* ---- How to Play ---- */
 let howtoReturnTo = 'screen-title';
 const HOWTO_ITEMS = [
@@ -231,6 +294,7 @@ window.addEventListener('keydown', e=>{
   if(e.repeat) return;
   if(e.code==='KeyM'){ toggleMute(); return; }
   if(isScreenActive('screen-howto')){ if(e.code==='Escape') closeHowTo(); return; }
+  if(isScreenActive('screen-settings')){ if(e.code==='Escape') closeSettings(); return; }
   if(e.code==='Escape' && (isScreenActive('screen-daily') || isScreenActive('screen-achievements'))){ backToTitle(); return; }
   if((e.code==='Escape' || e.code==='KeyP') && Game.running) Game.togglePause();
 });

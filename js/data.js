@@ -68,6 +68,9 @@ const state = {
   prey:'penguin',
   predators:['orca'],
   customMode:false,
+  twoPlayer:false,
+  prey2:'penguin',      // Player 2's pick in two-player mode
+  preyStep:1,           // which player is choosing on the prey screen
   difficulty:'medium',
   platform: isTouchDevice ? 'mobile' : 'desktop',
 };
@@ -87,5 +90,3 @@ const HighScore = {
   },
 };
 
-// Respect the player's "reduce motion" system setting (used for screen shake).
-const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
