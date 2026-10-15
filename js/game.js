@@ -1,0 +1,393 @@
+"use strict";
+/* =====================================================================
+   GAME — the main loop: spawning, movement, collisions and drawing.
+   ===================================================================== */
+const Game = (function(){
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const hud = {
+    score: document.getElementById('scoreP1'),
+    lives: document.getElementById('livesP1'),
+    flash: document.getElementById('warnFlash'),
+    chips: {
+      shield: document.getElementById('chip-shield'),
+      magnet: document.getElementById('chip-magnet'),
+      slow:   document.getElementById('chip-slow'),
+      mult:   document.getElementById('chip-mult'),
+    },
+  };
+
+  let VW = 960, VH = 540;
+  let running = false, paused = false, ended = false, rafId = null, lastT = 0;
+  let player = null, params = null, bg = null;
+  let fishes = [], bones = [], obstacles = [], predators = [], bosses = [], powerups = [], particles = [];
+  let score = 0, elapsed = 0, shownScore = -1, shownLives = -1;
+  let timers = {fish:0, obs:0, pred:0, pu:0};
+
+  /* ---------------- Canvas sizing ---------------- */
+  function fitCanvas(){
+    const rect = document.getElementById('gameCanvasWrap').getBoundingClientRect();
+    if(rect.width===0 || rect.height===0) return; // game screen hidden (menu/pause) — keep last size
+    const dpr = Math.min(window.devicePixelRatio||1, 2);
+    canvas.width = Math.round(rect.width*dpr);
+    canvas.height = Math.round(rect.height*dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    VW = rect.width; VH = rect.height;
+  }
+
+  /* ---------------- Lifecycle ---------------- */
+  function start(){
+    params = DIFF_PARAMS[state.difficulty];
+    show('screen-game');
+    fitCanvas();
+    initBackground();
+
+    const prey = findById(PREY_TYPES, state.prey);
+    const maxLives = params.lives + prey.stats.bonusLives;
+    player = {
+      preyId: prey.id, stats: prey.stats, r: prey.stats.radius,
+      x: VW*0.16, y: VH/2, alive: true, lives: maxLives, maxLives,
+      shieldT:0, magnetT:0, slowT:0, multT:0, invulnT:0.8, bob: Math.random()*10,
+    };
+    fishes = []; bones = []; obstacles = []; predators = []; bosses = []; powerups = []; particles = [];
+    score = 0; elapsed = 0; shownScore = -1; shownLives = -1;
+    timers = {fish:0.4, obs:1.2, pred:1.6, pu:4};
+    ended = false; running = true; paused = false;
+
+    Input.clear();
+    Input.setTouchEnabled(state.platform==='mobile');
+    Sound.startMusic('game');
+    lastT = performance.now();
+    cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(loop);
+  }
+
+  function stop(){
+    running = false; paused = false;
+    cancelAnimationFrame(rafId);
+    Sound.stopMusic();
+    Input.setTouchEnabled(false);
+  }
+
+  function togglePause(){
+    if(!running) return;
+    paused = !paused;
+    Input.clear();
+    if(paused){
+      cancelAnimationFrame(rafId);
+      show('screen-pause');
+    } else {
+      show('screen-game');
+      fitCanvas(); // the window may have been resized/rotated while paused
+      lastT = performance.now();
+      rafId = requestAnimationFrame(loop);
+    }
+  }
+
+  function loop(t){
+    if(!running || paused) return;
+    const dt = Math.min((t-lastT)/1000, 0.035);
+    lastT = t;
+    elapsed += dt;
+    update(dt);
+    if(running) draw();
+    if(running) rafId = requestAnimationFrame(loop);
+  }
+
+  /* ---------------- Spawning ---------------- */
+  function initBackground(){
+    bg = {bubbles:[], floes:[]};
+    for(let i=0;i<26;i++) bg.bubbles.push({x:rand(0,VW), y:rand(0,VH), r:rand(2,6), sp:rand(10,26), drift:rand(-8,8)});
+    for(let i=0;i<5;i++)  bg.floes.push({x:rand(0,VW), y:rand(30,VH-30), w:rand(60,140), sp:rand(14,26)});
+  }
+
+  function spawnFish(){
+    const speed = params.fishSpeed*getIntensity(elapsed);
+    const y = rand(50, VH-50);
+    if(Math.random() < params.boneRatio){
+      bones.push({x:VW+30, y, r:14, sp:speed*rand(0.8,1.15), val:-(2+Math.floor(Math.random()*2)), wob:Math.random()*10});
+    } else {
+      fishes.push({x:VW+30, y, r:13, sp:speed*rand(0.8,1.2), val:1+Math.floor(Math.random()*3), wob:Math.random()*10,
+        hue: pick(['#8fd9e8','#5fe1b0','#f0e090','#f0a857'])});
+    }
+  }
+  function spawnObstacle(){
+    obstacles.push({x:VW+40, y:rand(70,VH-70), w:rand(34,54), h:rand(50,90), sp:params.fishSpeed*0.85*getIntensity(elapsed)});
+  }
+  function spawnPredator(){
+    const type = findById(PREDATOR_TYPES, pick(state.predators.length ? state.predators : ['orca']));
+    const fromLeft = Math.random()<0.5;
+    const y = rand(60, VH-60);
+    predators.push({
+      type: type.id, x: fromLeft ? -60 : VW+60, y, baseY: y, dir: fromLeft ? 1 : -1,
+      sp: params.predSpeed*type.stats.speedMul*getIntensity(elapsed)*rand(0.9,1.2),
+      w: type.stats.w, h: type.stats.h, weave: type.stats.weave, age: Math.random()*6,
+      warn: params.warnTime, phase:'warn',
+    });
+  }
+  function spawnPowerup(){
+    powerups.push({kind:pick(Object.keys(POWERUP_STYLE)), x:VW+30, y:rand(60,VH-60), r:15, sp:params.fishSpeed*0.9, bob:0});
+  }
+  function spawnBoss(slot){
+    const trailGap = VW*0.26 + slot*90;
+    const type = state.predators[slot % state.predators.length] || 'orca';
+    bosses.push({slot, type, trailGap, x:player.x-trailGap, y:player.y, r:70-slot*3,
+      phase:'lurk', dir:-1, cool:rand(1.0,1.8), warnT:0, lungeT:0});
+  }
+  function updateBossSpawns(){
+    if(elapsed<1.2) return;
+    const wanted = BOSS_SCORE_THRESHOLDS.filter(s=>score>=s).length;
+    while(bosses.length<wanted) spawnBoss(bosses.length);
+  }
+
+  /* ---------------- Update ---------------- */
+  function update(dt){
+    const p = player;
+    const intensity = getIntensity(elapsed);
+
+    // background
+    bg.bubbles.forEach(b=>{ b.y -= b.sp*dt; b.x += Math.sin(elapsed+b.x)*b.drift*dt; if(b.y<-10){ b.y=VH+10; b.x=rand(0,VW); } });
+    bg.floes.forEach(f=>{ f.x -= f.sp*dt; if(f.x<-160) f.x = VW+rand(0,160); });
+
+    // timers on the player
+    p.invulnT = Math.max(0, p.invulnT-dt);
+    p.shieldT = Math.max(0, p.shieldT-dt);
+    p.magnetT = Math.max(0, p.magnetT-dt);
+    p.multT   = Math.max(0, p.multT-dt);
+    p.slowT   = Math.max(0, p.slowT-dt);
+    const slow = p.slowT>0 ? 0.45 : 1;
+
+    // movement
+    const move = Input.read();
+    p.y += move.vy*p.stats.speed*dt;
+    p.x += (move.dash*p.stats.dash + move.drift*p.stats.speed)*dt;
+    p.y = clamp(p.y, 30, VH-30);
+    p.x = clamp(p.x, VW*0.05, VW*0.46);
+    p.bob += dt*4;
+
+    // spawns
+    timers.fish -= dt; if(timers.fish<=0){ spawnFish(); timers.fish = rand(0.5,0.9)/(params.fishRate*intensity); }
+    timers.obs  -= dt; if(timers.obs<=0){ spawnObstacle(); timers.obs = rand(1.4,2.2)/(params.obsRate*intensity); }
+    if(params.isBoss) updateBossSpawns();
+    else { timers.pred -= dt; if(timers.pred<=0){ spawnPredator(); timers.pred = rand(1.6,2.6)/(params.predRate*intensity); } }
+    timers.pu -= dt; if(timers.pu<=0){ spawnPowerup(); timers.pu = rand(7,11); }
+
+    // good fish (magnet pulls them in)
+    for(let i=fishes.length-1;i>=0;i--){
+      const f = fishes[i]; f.x -= f.sp*slow*dt; f.wob += dt*4;
+      const d = Math.hypot(f.x-p.x, f.y-p.y);
+      if(p.magnetT>0 && d<90){ f.x += (p.x-f.x)*0.12; f.y += (p.y-f.y)*0.12; }
+      if(d < f.r+p.r){ addScore(f.val); spawnParticles(f.x,f.y,f.hue,6); Sound.sfx('eatGood'); fishes.splice(i,1); }
+      else if(f.x<-30) fishes.splice(i,1);
+    }
+    // bones
+    for(let i=bones.length-1;i>=0;i--){
+      const b = bones[i]; b.x -= b.sp*slow*dt; b.wob += dt*4;
+      if(Math.hypot(b.x-p.x, b.y-p.y) < b.r+p.r){ addScore(b.val); spawnParticles(b.x,b.y,'#e0e0e0',6); Sound.sfx('eatBad'); bones.splice(i,1); }
+      else if(b.x<-30) bones.splice(i,1);
+    }
+    // glaciers
+    for(let i=obstacles.length-1;i>=0;i--){
+      const o = obstacles[i]; o.x -= o.sp*slow*dt;
+      if(Math.abs(o.x-p.x)<o.w/2+p.r*0.7 && Math.abs(o.y-p.y)<o.h/2+p.r*0.7) hitPlayer(false);
+      if(o.x<-80) obstacles.splice(i,1);
+    }
+    // predators: flash a warning, then charge across their lane
+    for(let i=predators.length-1;i>=0;i--){
+      const pr = predators[i];
+      if(pr.phase==='warn'){
+        pr.warn -= dt;
+        if(pr.warn<=0){ pr.phase='charge'; Sound.sfx('warn'); }
+        continue;
+      }
+      pr.age += dt;
+      pr.x += pr.dir*pr.sp*slow*dt;
+      if(pr.weave) pr.y = clamp(pr.baseY + Math.sin(pr.age*3.2)*pr.weave, 30, VH-30);
+      if(Math.abs(pr.x-p.x)<pr.w/2+p.r*0.75 && Math.abs(pr.y-p.y)<pr.h/2+p.r*0.75) hitPlayer(true);
+      if(pr.x<-100 || pr.x>VW+100) predators.splice(i,1);
+    }
+    if(params.isBoss) updateBosses(dt, intensity, slow);
+    // powerups
+    for(let i=powerups.length-1;i>=0;i--){
+      const pu = powerups[i]; pu.x -= pu.sp*dt; pu.bob += dt*3;
+      if(Math.hypot(pu.x-p.x, pu.y-p.y) < pu.r+p.r){ applyPowerup(pu.kind); Sound.sfx('powerup'); powerups.splice(i,1); }
+      else if(pu.x<-30) powerups.splice(i,1);
+    }
+    // particles
+    for(let i=particles.length-1;i>=0;i--){
+      const pt = particles[i]; pt.x += pt.vx*dt; pt.y += pt.vy*dt; pt.life -= dt;
+      if(pt.life<=0) particles.splice(i,1);
+    }
+
+    updateHUD();
+  }
+
+  // Bosses shadow the prey, then surprise-lunge at their exact spot.
+  function updateBosses(dt, intensity, slow){
+    const p = player;
+    bosses.forEach(boss=>{
+      if(boss.phase==='lurk'){
+        const rate = Math.min(1, dt*3.2*intensity*slow);
+        boss.x += (p.x-boss.trailGap-boss.x)*rate;
+        boss.y += (p.y-boss.y)*rate;
+        boss.y = clamp(boss.y, 40, VH-40);
+        boss.dir = -1;
+        boss.cool -= dt*slow;
+        if(boss.cool<=0){ boss.phase='warn'; boss.warnT=0.3; Sound.sfx('warn'); }
+      } else if(boss.phase==='warn'){
+        boss.warnT -= dt;
+        boss.dir = 1;
+        if(boss.warnT<=0){ boss.phase='lunge'; boss.lungeT=0.5; }
+      } else if(boss.phase==='lunge'){
+        const spd = 480*intensity*slow;
+        const dx = p.x-boss.x, dy = p.y-boss.y;
+        const dist = Math.hypot(dx,dy) || 1;
+        boss.x += dx/dist*spd*dt;
+        boss.y += dy/dist*spd*dt;
+        boss.dir = dx<0 ? -1 : 1;
+        boss.lungeT -= dt;
+        if(boss.lungeT<=0 || dist<20) boss.phase='retreat';
+      } else if(boss.phase==='retreat'){
+        const tx = p.x-boss.trailGap, rate = Math.min(1, dt*1.6*intensity*slow);
+        boss.x += (tx-boss.x)*rate;
+        boss.y += (p.y-boss.y)*rate;
+        boss.dir = -1;
+        if(Math.hypot(tx-boss.x, p.y-boss.y)<24){ boss.phase='lurk'; boss.cool = rand(1.3,2.2)/intensity; }
+      }
+      if(Math.hypot(boss.x-p.x, boss.y-p.y) < boss.r*0.8+p.r*0.7) hitPlayer(true);
+    });
+  }
+
+  /* ---------------- Scoring & damage ---------------- */
+  function addScore(val){
+    score = Math.max(0, score + val*(player.multT>0 ? 2 : 1));
+  }
+
+  // fatal = predator/boss bite; on 1-life levels (Extreme) that's an instant game over.
+  function hitPlayer(fatal){
+    const p = player;
+    if(!p.alive || p.invulnT>0) return;
+    if(p.shieldT>0){
+      p.shieldT = 0; p.invulnT = 1.0;
+      spawnParticles(p.x,p.y,'#8fd9e8',10); Sound.sfx('shield');
+      return;
+    }
+    p.invulnT = 1.0;
+    p.lives -= 1;
+    spawnParticles(p.x,p.y,'#e85b5b',14);
+    Sound.sfx('hit');
+    flashWarn(p.x,p.y);
+    if(p.lives<=0 || (fatal && params.lives===1)){ p.lives = 0; p.alive = false; endGame(); }
+  }
+
+  function flashWarn(x,y){
+    hud.flash.style.setProperty('--wx', (x/VW*100)+'%');
+    hud.flash.style.setProperty('--wy', (y/VH*100)+'%');
+    hud.flash.style.opacity = '1';
+    setTimeout(()=>{ hud.flash.style.opacity = '0'; }, 180);
+  }
+
+  function applyPowerup(kind){
+    const durations = {shield:8, magnet:6, slow:5, mult:8};
+    player[kind+'T'] = durations[kind];
+  }
+
+  function spawnParticles(x,y,color,n){
+    for(let i=0;i<n;i++) particles.push({x, y, vx:rand(-80,80), vy:rand(-80,80), life:rand(0.3,0.6), color});
+  }
+
+  function updateHUD(){
+    if(score!==shownScore){ hud.score.textContent = score; shownScore = score; }
+    if(player.lives!==shownLives){
+      hud.lives.innerHTML = '';
+      for(let i=0;i<player.maxLives;i++){
+        const dot = document.createElement('div');
+        dot.className = 'life-dot' + (i<player.lives ? '' : ' off');
+        hud.lives.appendChild(dot);
+      }
+      shownLives = player.lives;
+    }
+    for(const kind in hud.chips) hud.chips[kind].classList.toggle('active', player[kind+'T']>0);
+  }
+
+  function endGame(){
+    if(ended) return;
+    ended = true;
+    updateHUD();
+    stop();
+    Sound.sfx('gameover');
+    const best = HighScore.submit(score);
+    document.getElementById('finalScore').textContent = score;
+    document.getElementById('resultLine').textContent = `Score: ${score}`;
+    document.getElementById('highscoreLine').textContent = `Best: ${best}`;
+    show('screen-gameover');
+  }
+
+  /* ---------------- Draw ---------------- */
+  function draw(){
+    // water
+    const grad = ctx.createLinearGradient(0,0,0,VH);
+    grad.addColorStop(0,'#0d3a5c'); grad.addColorStop(0.5,'#0a2e4d'); grad.addColorStop(1,'#071f38');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,VW,VH);
+    // ice floe silhouettes & bubbles
+    ctx.fillStyle = 'rgba(180,225,240,0.10)';
+    bg.floes.forEach(f=>{ ctx.beginPath(); ctx.ellipse(f.x,f.y,f.w/2,14,0,0,Math.PI*2); ctx.fill(); });
+    ctx.fillStyle = 'rgba(220,245,255,0.35)';
+    bg.bubbles.forEach(b=>{ ctx.beginPath(); ctx.arc(b.x,b.y,b.r,0,Math.PI*2); ctx.fill(); });
+
+    obstacles.forEach(drawGlacier);
+    fishes.forEach(f=>drawFish(ctx, f.x, f.y+Math.sin(f.wob)*3, f.hue));
+    bones.forEach(b=>drawBone(ctx, b.x, b.y+Math.sin(b.wob)*3));
+    powerups.forEach(pu=>drawPowerup(ctx, pu));
+
+    predators.forEach(pr=>{
+      if(pr.phase==='warn') drawWarning(ctx, pr.dir===1 ? 30 : VW-30, pr.dir, pr.y, VW, 18, elapsed*20);
+      else drawPredator(ctx, pr.type, pr.x, pr.y, pr.dir, 1.15);
+    });
+    bosses.forEach(b=>{
+      if(b.phase==='warn') drawWarning(ctx, 0, 1, b.y, VW, 22, elapsed*30);
+      if(b.x > -140) drawBoss(ctx, b); // mostly off-screen while lurking
+    });
+
+    // player (flickers while invulnerable)
+    const p = player;
+    if(p.alive && (p.invulnT<=0 || Math.sin(elapsed*30)>0)){
+      const y = p.y+Math.sin(p.bob)*4;
+      if(p.shieldT>0){
+        ctx.strokeStyle='rgba(143,217,232,.8)'; ctx.lineWidth=3;
+        ctx.beginPath(); ctx.arc(p.x,y,p.r+8,0,Math.PI*2); ctx.stroke();
+      }
+      drawPrey(ctx, p.preyId, p.x, y, 1, 1.4);
+    }
+
+    particles.forEach(pt=>{
+      ctx.save(); ctx.globalAlpha = Math.max(0,pt.life/0.6); ctx.fillStyle = pt.color;
+      ctx.beginPath(); ctx.arc(pt.x,pt.y,3,0,Math.PI*2); ctx.fill(); ctx.restore();
+    });
+
+    // vignette
+    const vg = ctx.createRadialGradient(VW/2,VH/2,VH*0.35,VW/2,VH/2,VH*0.9);
+    vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.35)');
+    ctx.fillStyle = vg; ctx.fillRect(0,0,VW,VH);
+  }
+
+  function drawGlacier(o){
+    const g = ctx.createLinearGradient(o.x-o.w/2,o.y-o.h/2,o.x+o.w/2,o.y+o.h/2);
+    g.addColorStop(0,'#dff4fb'); g.addColorStop(1,'#8fc7dc');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(o.x-o.w/2,   o.y-o.h/2);
+    ctx.lineTo(o.x+o.w*0.1, o.y-o.h/2-8);
+    ctx.lineTo(o.x+o.w/2,   o.y-o.h/2+6);
+    ctx.lineTo(o.x+o.w/2-4, o.y+o.h/2);
+    ctx.lineTo(o.x-o.w/2+6, o.y+o.h/2+6);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5; ctx.stroke();
+  }
+
+  return {
+    start, stop, togglePause, fitCanvas,
+    get running(){ return running; },
+    get paused(){ return paused; },
+  };
+})();

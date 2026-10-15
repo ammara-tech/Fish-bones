@@ -1,0 +1,70 @@
+/* =====================================================================
+   GAME SCREEN — canvas, HUD, power-up chips, rotate hint,
+   and the on-screen touch controls for mobile.
+   ===================================================================== */
+#screen-game{padding:0; background:none; overflow:hidden;}
+#screen-game::before{display:none;}
+#gameCanvasWrap{position:absolute; inset:0;}
+#gameCanvas{position:absolute; inset:0; width:100%; height:100%; display:block;}
+
+/* ---- HUD ---- */
+#hud{position:absolute; top:0; left:0; width:100%; display:flex; justify-content:space-between; align-items:flex-start; pointer-events:none; z-index:4;
+  padding:calc(14px + env(safe-area-inset-top,0px)) calc(18px + env(safe-area-inset-right,0px)) 14px calc(18px + env(safe-area-inset-left,0px));}
+.hud-panel{background:rgba(8,25,43,.55); border:1px solid rgba(255,255,255,.15); border-radius:12px; padding:8px 14px; backdrop-filter:blur(3px); font-family:var(--font-display); text-align:left;}
+.hud-score{font-size:22px; font-weight:800; color:var(--snow);}
+.hud-score span{color:var(--aurora);}
+.hud-lives{display:flex; gap:5px; margin-top:4px;}
+.life-dot{width:14px; height:14px; border-radius:50%; background:var(--danger); box-shadow:0 0 0 1px rgba(0,0,0,.3);}
+.life-dot.off{background:rgba(255,255,255,.15);}
+#pauseBtnGame{pointer-events:auto;}
+.powerup-indicators{display:flex; gap:8px; margin-top:8px;}
+.pu-chip{font-size:11px; background:rgba(95,225,176,.25); border:1px solid var(--aurora); color:#dffff0; padding:3px 8px; border-radius:20px; display:none;}
+.pu-chip.active{display:block;}
+#warnFlash{position:absolute; inset:0; pointer-events:none; opacity:0; transition:opacity .15s;
+  background:radial-gradient(circle at var(--wx,50%) var(--wy,50%), rgba(232,91,91,.35), transparent 60%);}
+
+/* ---- "Turn your phone" hint (game plays best in landscape) ---- */
+#rotateHint{position:absolute; inset:0; z-index:20; display:none; flex-direction:column; align-items:center; justify-content:center;
+  background:rgba(6,18,31,.92); text-align:center; padding:24px; gap:10px;}
+#rotateHint.show{display:flex;}
+#rotateHint .spin{font-size:44px; animation:spinIcon 1.6s ease-in-out infinite;}
+@keyframes spinIcon{0%,100%{transform:rotate(0deg);} 50%{transform:rotate(90deg);}}
+#rotateHint p{margin:0; font-family:var(--font-display); font-size:16px; color:var(--snow); max-width:280px;}
+
+/* ---- Touch controls (mobile mode) ---- */
+#touchControls{position:absolute; inset:0; display:none; pointer-events:none; z-index:6;}
+#touchControls.active{display:block;}
+#touchStick{
+  position:absolute; left:calc(20px + env(safe-area-inset-left,0px)); bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  width:clamp(78px, 22vw, 116px); height:clamp(78px, 22vw, 116px); border-radius:50%;
+  background:rgba(8,25,43,.5); border:2px solid rgba(255,255,255,.3); pointer-events:auto;
+  touch-action:none; backdrop-filter:blur(3px);
+}
+#touchStickKnob{
+  position:absolute; left:50%; top:50%; width:42%; height:42%; border-radius:50%;
+  background:rgba(143,217,232,.55); border:2px solid var(--ice); transform:translate(-50%,-50%);
+  pointer-events:none; transition:background .1s;
+}
+#touchStick.engaged #touchStickKnob{background:rgba(95,225,176,.65); border-color:var(--aurora);}
+#touchDashRow{
+  position:absolute; right:calc(16px + env(safe-area-inset-right,0px)); bottom:calc(20px + env(safe-area-inset-bottom,0px));
+  display:flex; gap:clamp(8px,2.5vw,14px); pointer-events:auto;
+}
+.dashbtn{
+  width:clamp(48px, 14vw, 64px); height:clamp(48px, 14vw, 64px); border-radius:50%;
+  border:2px solid rgba(255,255,255,.3); background:rgba(8,25,43,.55); color:var(--snow);
+  font-size:clamp(12px,3vw,16px); font-weight:800; touch-action:none; backdrop-filter:blur(3px);
+  display:flex; align-items:center; justify-content:center; user-select:none; -webkit-user-select:none;
+}
+.dashbtn:active, .dashbtn.pressed{background:rgba(240,168,87,.5); border-color:var(--amber);}
+
+/* Phones held sideways (the intended orientation) */
+@media (max-height:480px){
+  #touchStick{width:clamp(64px,16vh,92px); height:clamp(64px,16vh,92px); bottom:calc(10px + env(safe-area-inset-bottom,0px));}
+  #touchDashRow{bottom:calc(10px + env(safe-area-inset-bottom,0px)); gap:8px;}
+  .dashbtn{width:clamp(44px,11vh,58px); height:clamp(44px,11vh,58px);}
+  .hud-panel{padding:5px 10px;}
+  .hud-score{font-size:16px;}
+  .life-dot{width:10px; height:10px;}
+  #hud{padding-top:calc(6px + env(safe-area-inset-top,0px));}
+}

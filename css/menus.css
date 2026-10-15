@@ -1,0 +1,105 @@
+/* =====================================================================
+   MENUS — title sign, aurora, selection cards, difficulty, game over.
+   ===================================================================== */
+
+/* ---- Aurora ribbons ---- */
+.aurora-wrap{position:absolute; top:0; left:0; width:100%; height:55%; overflow:hidden; pointer-events:none; filter:blur(18px); opacity:.55;}
+.aurora-band{position:absolute; width:140%; height:220px; left:-20%; border-radius:50%;
+  background:linear-gradient(90deg, transparent, var(--aurora), transparent 70%);
+  animation:auroraDrift 14s ease-in-out infinite;}
+.aurora-band.b2{background:linear-gradient(90deg, transparent, var(--aurora2), transparent 70%); top:60px; animation-duration:19s; animation-delay:-4s; opacity:.8;}
+.aurora-band.b3{background:linear-gradient(90deg, transparent, var(--ice), transparent 70%); top:-40px; animation-duration:23s; animation-delay:-9s; opacity:.6;}
+@keyframes auroraDrift{
+  0%,100%{transform:translateX(-6%) translateY(0) scaleY(1);}
+  50%{transform:translateX(6%) translateY(20px) scaleY(1.25);}
+}
+
+/* ---- Hanging wooden sign (signature element) ---- */
+.sign-hang{display:flex; flex-direction:column; align-items:center; margin-bottom:6px; width:min(420px,88vw);}
+.ropes{display:flex; gap:clamp(60px,30vw,120px); justify-content:center;}
+.rope{width:2px; height:26px; background:#9c8362;}
+.sign{
+  position:relative; width:100%; overflow-wrap:break-word;
+  background:linear-gradient(180deg,var(--wood-light),var(--wood) 55%, var(--wood-dark));
+  border:6px solid var(--wood-dark); border-radius:10px; padding:clamp(16px,4vw,26px) clamp(18px,6vw,42px);
+  box-shadow:0 18px 34px rgba(0,0,0,.45), inset 0 0 0 3px rgba(255,255,255,.06);
+  animation:signSwing 5.5s ease-in-out infinite; transform-origin:top center;
+}
+@keyframes signSwing{ 0%,100%{transform:rotate(-1.3deg);} 50%{transform:rotate(1.3deg);} }
+.sign::before,.sign::after{content:''; position:absolute; top:-9px; width:10px; height:10px; background:#3a2a1c; border-radius:50%; box-shadow:inset 0 0 0 2px #1f150e;}
+.sign::before{left:16px;}
+.sign::after{right:16px;}
+.title-main{font-family:var(--font-display); font-weight:800; font-size:clamp(30px,6vw,58px); letter-spacing:1px;
+  color:var(--snow); text-shadow:0 3px 0 #2c1c11, 0 2px 10px rgba(0,0,0,.5); margin:0; line-height:1;}
+.title-main.small{font-size:clamp(26px,5vw,42px);}
+.title-sub{font-family:var(--font-display); font-weight:600; font-size:clamp(13px,2.2vw,20px); color:var(--ice);
+  letter-spacing:4px; text-transform:uppercase; margin-top:8px;}
+
+/* ---- Title screen: buttons + credit board ---- */
+.menu-row{display:flex; align-items:center; justify-content:center; gap:26px; margin-top:34px;}
+.credit-board{
+  width:160px; height:160px; flex:0 0 auto; padding:14px; transform:rotate(1.5deg);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:8px; text-align:center;
+  background:linear-gradient(180deg,var(--wood-light),var(--wood) 55%, var(--wood-dark));
+  border:5px solid var(--wood-dark); border-radius:10px;
+  box-shadow:0 10px 22px rgba(0,0,0,.45), inset 0 0 0 3px rgba(255,255,255,.06);
+}
+.credit-board p{margin:0; font-family:var(--font-display); font-weight:700; font-size:15px; line-height:1.35; color:var(--snow); text-shadow:0 1px 0 #2c1c11;}
+.credit-board p:first-child{font-size:17px;}
+
+/* ---- Character cards ---- */
+.card-grid{display:flex; flex-wrap:wrap; gap:16px; justify-content:center; max-width:900px;}
+.card{
+  width:150px; padding:16px 10px 14px; border-radius:16px; cursor:pointer; position:relative;
+  background:linear-gradient(160deg, rgba(255,255,255,.09), rgba(255,255,255,.02));
+  border:2px solid rgba(255,255,255,.15); transition:.15s ease;
+}
+.card.selected{border-color:var(--aurora); background:linear-gradient(160deg, rgba(95,225,176,.22), rgba(95,225,176,.04)); box-shadow:0 0 0 3px rgba(95,225,176,.25);}
+.card canvas{width:100%; height:84px; display:block;}
+.platform-icon{font-size:48px; line-height:84px; height:84px;}
+.card .name{font-family:var(--font-display); font-weight:700; font-size:15px; margin-top:8px;}
+.card .tag{font-size:11px; color:var(--ice); opacity:.85; margin-top:2px;}
+.card .badge{position:absolute; top:6px; right:8px; font-size:11px; background:var(--aurora); color:#06331f; padding:2px 6px; border-radius:8px; font-weight:800; display:none;}
+.card.selected .badge{display:block;}
+
+/* ---- Difficulty cards ---- */
+.diff-grid{display:flex; gap:14px; flex-wrap:wrap; justify-content:center; max-width:880px;}
+.diffcard{width:150px; padding:16px 12px; border-radius:14px; cursor:pointer; border:2px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.05); transition:.15s;}
+.diffcard.selected{border-color:var(--amber); background:rgba(240,168,87,.18); box-shadow:0 0 0 3px rgba(240,168,87,.25);}
+.diffcard .lvl{font-family:var(--font-display); font-weight:800; font-size:17px;}
+.diffcard .stars{color:var(--amber); margin:6px 0; font-size:14px;}
+.diffcard .desc{font-size:11.5px; color:var(--ice); line-height:1.4;}
+
+@media (hover:hover){
+  .card:hover{transform:translateY(-4px); border-color:var(--ice);}
+  .diffcard:hover{transform:translateY(-3px);}
+}
+
+/* ---- Game over ---- */
+#screen-gameover .sign{padding:clamp(18px,5vw,30px) clamp(20px,7vw,46px);}
+#screen-gameover .menu-actions{margin-top:26px;}
+.finalscore{font-family:var(--font-display); font-size:clamp(32px,9vw,44px); font-weight:800; color:var(--aurora); margin:10px 0 2px;}
+.result-line{font-size:14px; color:var(--snow); margin-bottom:6px;}
+.highscore{font-size:13px; color:var(--ice); margin-bottom:6px;}
+
+/* ---- Small screens ---- */
+@media (max-width:640px){
+  .menu-row{flex-direction:column; gap:16px;}
+  .credit-board{width:130px; height:130px; padding:10px; transform:rotate(-1deg);}
+  .credit-board p{font-size:12px;}
+  .credit-board p:first-child{font-size:13px;}
+  .card, .diffcard{width:130px;}
+}
+/* Phones held sideways: compact everything so menus fit without scrolling */
+@media (max-height:480px){
+  .screen{padding:12px;}
+  p.screen-desc{margin-bottom:12px; font-size:13px;}
+  .footer-nav{margin-top:14px;}
+  .card{width:118px; padding:10px 8px;}
+  .card canvas, .platform-icon{height:60px; line-height:60px;}
+  .diffcard{width:128px; padding:10px;}
+  .menu-row{margin-top:16px;}
+  .sign{padding:12px 24px;}
+  .btn{padding:10px 18px; font-size:17px;}
+}

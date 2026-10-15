@@ -1,0 +1,69 @@
+"use strict";
+/* =====================================================================
+   GAME DATA — characters, difficulty tuning and the player's setup.
+   ===================================================================== */
+
+// Prey stats: speed = up/down, dash = left/right, radius = hitbox size.
+const PREY_TYPES = [
+  {id:'penguin', name:'Penguin', tag:'Balanced',     stats:{speed:280, dash:360, radius:22, bonusLives:0}},
+  {id:'walrus',  name:'Walrus',  tag:'Tanky & Slow', stats:{speed:225, dash:300, radius:26, bonusLives:1}},
+  {id:'squid',   name:'Squid',   tag:'Agile',        stats:{speed:300, dash:390, radius:17, bonusLives:0}},
+  {id:'seal',    name:'Seal',    tag:'Fast',         stats:{speed:335, dash:440, radius:22, bonusLives:0}},
+];
+
+// Predator stats: speedMul scales charge speed, w/h = hitbox, weave = vertical zig-zag size.
+const PREDATOR_TYPES = [
+  {id:'polarbear',   name:'Polar Bear',   tag:'Heavy charger', stats:{speedMul:0.85, w:68, h:38, weave:0}},
+  {id:'orca',        name:'Orca',         tag:'Fast striker',  stats:{speedMul:1.25, w:60, h:30, weave:0}},
+  {id:'narwhal',     name:'Narwhal',      tag:'Tusk lunge',    stats:{speedMul:1.0,  w:84, h:28, weave:0}},
+  {id:'leopardseal', name:'Leopard Seal', tag:'Erratic',       stats:{speedMul:1.05, w:58, h:30, weave:45}},
+];
+
+const DIFFICULTIES = [
+  {id:'easy',    name:'Easy',       stars:1, desc:'Slow currents, forgiving lanes.'},
+  {id:'medium',  name:'Medium',     stars:2, desc:'A steady hunt begins.'},
+  {id:'hard',    name:'Hard',       stars:3, desc:'Predators strike quicker.'},
+  {id:'extreme', name:'Extreme',    stars:4, desc:'One hit. Thin ice everywhere.'},
+  {id:'boss',    name:'Boss Level', stars:5, desc:'A giant predator trails right behind you and strikes at your exact spot — more join in as your score climbs.'},
+];
+
+const DIFF_PARAMS = {
+  easy:    {fishSpeed:150, predSpeed:170, fishRate:0.95, obsRate:0.6,  predRate:0.42, lives:4, boneRatio:0.30, warnTime:0.85},
+  medium:  {fishSpeed:195, predSpeed:225, fishRate:1.15, obsRate:0.85, predRate:0.65, lives:3, boneRatio:0.36, warnTime:0.65},
+  hard:    {fishSpeed:200, predSpeed:250, fishRate:1.35, obsRate:1.1,  predRate:0.9,  lives:2, boneRatio:0.40, warnTime:0.5},
+  extreme: {fishSpeed:285, predSpeed:350, fishRate:1.55, obsRate:1.35, predRate:1.2,  lives:1, boneRatio:0.46, warnTime:0.38},
+  boss:    {fishSpeed:185, predSpeed:210, fishRate:1.2,  obsRate:0.85, predRate:0.6,  lives:2, boneRatio:0.36, warnTime:0.55, isBoss:true},
+};
+
+// Boss level: 1 giant predator from the start, a 2nd at 25 points, a 3rd at 50.
+const BOSS_SCORE_THRESHOLDS = [0, 25, 50];
+
+function findById(list, id){ return list.find(x=>x.id===id) || list[0]; }
+
+// Runs get gradually harder: up to +60% speed & spawn rate after ~70s.
+function getIntensity(elapsedSec){ return 1 + Math.min(elapsedSec/70, 0.6); }
+
+function rand(a,b){ return a+Math.random()*(b-a); }
+function pick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
+function clamp(v,lo,hi){ return Math.max(lo, Math.min(hi, v)); }
+
+/* ---- The player's current setup ---- */
+const isTouchDevice = window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
+const state = {
+  prey:'penguin',
+  predators:['orca'],
+  customMode:false,
+  difficulty:'medium',
+  platform: isTouchDevice ? 'mobile' : 'desktop',
+};
+
+/* ---- High score (saved in the browser) ---- */
+const HIGH_SCORE_KEY = 'icyCuisineHighScore';
+const HighScore = {
+  get(){ try{ return parseInt(localStorage.getItem(HIGH_SCORE_KEY)||'0',10) || 0; }catch(e){ return 0; } },
+  submit(score){
+    const best = Math.max(this.get(), score);
+    try{ localStorage.setItem(HIGH_SCORE_KEY, String(best)); }catch(e){}
+    return best;
+  },
+};
