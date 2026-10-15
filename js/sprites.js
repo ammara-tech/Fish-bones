@@ -117,11 +117,26 @@ function drawBone(ctx, x, y){
   ctx.restore();
 }
 
+function drawGlacier(ctx, o){
+  const g = ctx.createLinearGradient(o.x-o.w/2,o.y-o.h/2,o.x+o.w/2,o.y+o.h/2);
+  g.addColorStop(0,'#dff4fb'); g.addColorStop(1,'#8fc7dc');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(o.x-o.w/2,   o.y-o.h/2);
+  ctx.lineTo(o.x+o.w*0.1, o.y-o.h/2-8);
+  ctx.lineTo(o.x+o.w/2,   o.y-o.h/2+6);
+  ctx.lineTo(o.x+o.w/2-4, o.y+o.h/2);
+  ctx.lineTo(o.x-o.w/2+6, o.y+o.h/2+6);
+  ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(255,255,255,.5)'; ctx.lineWidth=1.5; ctx.stroke();
+}
+
+// name/info are used by the How to Play screen
 const POWERUP_STYLE = {
-  shield:{color:'#8fd9e8', glyph:'S'},
-  magnet:{color:'#e85b5b', glyph:'M'},
-  slow:  {color:'#9b6bff', glyph:'Z'},
-  mult:  {color:'#f0e090', glyph:'x2'},
+  shield:{color:'#8fd9e8', glyph:'S',  name:'Shield',   info:'Blocks the next hit'},
+  magnet:{color:'#e85b5b', glyph:'M',  name:'Magnet',   info:'Pulls nearby fish to you'},
+  slow:  {color:'#9b6bff', glyph:'Z',  name:'Slow-mo',  info:'Slows everything down'},
+  mult:  {color:'#f0e090', glyph:'x2', name:'Double',   info:'Double points — bones too!'},
 };
 function drawPowerup(ctx, pu){
   const style = POWERUP_STYLE[pu.kind];
