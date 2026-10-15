@@ -7,8 +7,7 @@
 (function(){
   const canvas = document.getElementById('snowCanvas');
   const ctx = canvas.getContext('2d');
-  const COUNT = prefersReducedMotion ? 25 : 70;
-  const SPEED = prefersReducedMotion ? 0.35 : 1;
+  const COUNT = 70;
   let flakes = [], W = 0, H = 0, last = performance.now();
 
   function resize(){
@@ -28,7 +27,9 @@
     if(!inGame){
       ctx.clearRect(0,0,W,H);
       ctx.fillStyle = 'rgba(255,255,255,.8)';
-      flakes.forEach(f=>{
+      // "Reduce motion" setting: fewer, slower flakes
+      const calm = reduceMotion(), SPEED = calm ? 0.35 : 1;
+      (calm ? flakes.slice(0,25) : flakes).forEach(f=>{
         f.y += f.sp*SPEED*dt;
         f.x += Math.sin(now/1000*f.sway + f.ph)*12*dt*SPEED;
         if(f.y > H+5){ Object.assign(f, makeFlake(true)); }

@@ -20,6 +20,7 @@
   <div class="screen active" id="screen-title">
     <div class="aurora-wrap"><div class="aurora-band"></div><div class="aurora-band b2"></div><div class="aurora-band b3"></div></div>
     <div class="toprow">
+      <button class="iconbtn" id="settingsBtn" title="Settings">⚙️</button>
       <button class="iconbtn mute-toggle" id="muteBtn" title="Mute">🔊</button>
     </div>
     <div class="sign-hang">
@@ -37,7 +38,8 @@
         <div class="menu-small">
           <button class="btn secondary" id="customBtn">Custom Predators</button>
           <button class="btn secondary" id="howtoBtn">How to Play</button>
-          <button class="btn secondary wide" id="achievementsBtn">🏆 Achievements <span id="achCount"></span></button>
+          <button class="btn secondary" id="twoPlayerBtn">👥 2 Players</button>
+          <button class="btn secondary" id="achievementsBtn">🏆 Achievements <span id="achCount"></span></button>
         </div>
       </div>
       <div class="credit-board">
@@ -116,15 +118,7 @@
       <div id="countdown" aria-live="assertive"></div>
       <div id="waveBanner" aria-live="polite"><div class="wave-title"></div><div class="wave-sub"></div></div>
       <div id="hud">
-        <div class="hud-panel">
-          <div class="hud-score">Score: <span id="scoreP1">0</span></div>
-          <div class="hud-lives" id="livesP1"></div>
-          <div class="hud-meta">
-            <span id="hudWave">Wave 1</span>
-            <span id="hudCombo" class="hud-combo"></span>
-          </div>
-          <div class="powerup-indicators" id="powerupChips"></div>
-        </div>
+        <div class="hud-panels" id="hudPanels"></div>
         <div class="hud-buttons">
           <button class="iconbtn mute-toggle" id="muteBtnGame" title="Mute (M)">🔊</button>
           <button class="iconbtn" id="pauseBtnGame" title="Pause (Esc / P)">⏸</button>
@@ -153,6 +147,7 @@
       <button class="btn" id="resumeBtn">Resume</button>
       <button class="btn secondary" id="restartFromPause">Restart Level</button>
       <button class="btn secondary" id="howtoFromPause">How to Play</button>
+      <button class="btn secondary" id="settingsFromPause">Settings</button>
       <button class="btn danger" id="quitBtn">Quit to Menu</button>
     </div>
   </div>
@@ -184,6 +179,42 @@
     <div class="footer-nav"><button class="btn" id="achDone">Back</button></div>
   </div>
 
+  <!-- SETTINGS -->
+  <div class="screen" id="screen-settings">
+    <div class="toprow"><button class="iconbtn" id="backFromSettings" title="Back">✕</button></div>
+    <h2 class="screen-title">Settings</h2>
+    <div class="settings-card">
+      <label class="setting">
+        <span class="setting-name">🎵 Music</span>
+        <input type="range" min="0" max="100" step="5" id="setMusic">
+        <span class="setting-value" id="setMusicVal"></span>
+      </label>
+      <label class="setting">
+        <span class="setting-name">🔔 Sound effects</span>
+        <input type="range" min="0" max="100" step="5" id="setSfx">
+        <span class="setting-value" id="setSfxVal"></span>
+      </label>
+      <label class="setting toggle">
+        <span class="setting-name">🌀 Reduce motion<small>No screen shake, calmer snow and animations</small></span>
+        <input type="checkbox" id="setMotion">
+        <span class="switch" aria-hidden="true"></span>
+      </label>
+      <div class="setting controls-list">
+        <span class="setting-name">🎮 Controls</span>
+        <div>
+          <div><b>1 player</b> Arrow keys or W A S D · Esc / P pause · M mute</div>
+          <div><b>2 players</b> P1: arrow keys · P2: W A S D</div>
+          <div><b>Touch</b> Joystick to swim · ◀◀ / ▶▶ to dash</div>
+        </div>
+      </div>
+      <div class="setting danger-zone">
+        <span class="setting-name">♻️ Start over<small>Clears best scores, achievements and unlocks</small></span>
+        <button class="btn danger" id="resetProgressBtn">Reset progress</button>
+      </div>
+    </div>
+    <div class="footer-nav"><button class="btn" id="settingsDone">Done</button></div>
+  </div>
+
   <!-- HOW TO PLAY -->
   <div class="screen" id="screen-howto">
     <div class="toprow"><button class="iconbtn" id="backFromHowto" title="Back">✕</button></div>
@@ -196,7 +227,8 @@
       <span><b>Waves</b> every 30s it gets faster — plus a wave bonus</span>
     </div>
     <div class="howto-controls">
-      <div><strong>Keyboard</strong>↑ / ↓ swim · ← / → dash · Esc or P pause · M mute</div>
+      <div><strong>Keyboard</strong>↑ ↓ or W S swim · ← → or A D dash · Esc / P pause · M mute</div>
+      <div><strong>2 players</strong>P1: arrow keys · P2: W A S D</div>
       <div><strong>Touch</strong>Joystick to swim · ◀◀ / ▶▶ buttons to dash</div>
     </div>
     <div class="footer-nav">
@@ -228,6 +260,7 @@
 
 <!-- Load order matters: each file uses things defined in the ones above it. -->
 <script src="js/data.js"></script>
+<script src="js/settings.js"></script>
 <script src="js/audio.js"></script>
 <script src="js/sprites.js"></script>
 <script src="js/scenery.js"></script>

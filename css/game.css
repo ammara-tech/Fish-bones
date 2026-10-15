@@ -83,9 +83,7 @@
   80%{opacity:1;}
   100%{transform:scale(.85); opacity:0;}
 }
-@media (prefers-reduced-motion: reduce){
-  #countdown.pop{animation:none;}
-}
+.reduce-motion #countdown.pop{animation:none;}
 
 /* ---- Wave + combo line in the HUD ---- */
 .hud-meta{display:flex; gap:10px; align-items:baseline; margin-top:4px; font-size:13px; font-weight:700; color:var(--ice);}
@@ -107,3 +105,11 @@
   100%{opacity:0; transform:translate(-50%,-10px);}
 }
 @media (max-height:480px){ #waveBanner{top:16%; padding:6px 18px;} .hud-meta{font-size:11px;} }
+
+/* ---- One HUD panel per player ---- */
+.hud-panels{display:flex; gap:10px; align-items:flex-start;}
+.hud-panel{border-color:var(--player, rgba(255,255,255,.15));}
+.hud-score .hud-tag{display:inline-block; padding:0 8px; border-radius:10px; font-size:14px; background:var(--player); color:#0b2a45; vertical-align:middle;}
+.hud-panel.out{opacity:.45; filter:grayscale(.8);}
+.hud-panel.out .hud-score::after{content:' · out'; font-size:13px; color:var(--danger);}
+@media (max-height:480px){ .hud-tag{font-size:12px;} }

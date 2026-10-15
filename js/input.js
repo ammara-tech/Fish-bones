@@ -89,14 +89,24 @@ const Input = (function(){
     if(!on) clear();
   }
 
-  /* Combined movement: vy = up/down (-1..1), dash = left/right (-1..1), drift = small sideways nudge from the stick */
-  function read(){
-    let vy = touch.dy, dash = 0;
-    if(keys.ArrowUp) vy -= 1;
-    if(keys.ArrowDown) vy += 1;
-    if(keys.ArrowLeft || touch.dashLeft) dash -= 1;
-    if(keys.ArrowRight || touch.dashRight) dash += 1;
-    return {vy: clamp(vy,-1,1), dash, drift: touch.dx*0.5};
+  const ARROWS = {up:'ArrowUp', down:'ArrowDown', left:'ArrowLeft', right:'ArrowRight'};
+  const WASD   = {up:'KeyW',    down:'KeyS',      left:'KeyA',      right:'KeyD'};
+
+  /* Movement for one player: vy = up/down (-1..1), dash = left/right (-1..1),
+     drift = small sideways nudge from the stick.
+     control: 'solo' (arrows or WASD + touch), 'p1' (arrows), 'p2' (WASD) */
+  function read(control){
+    const sets = control==='p1' ? [ARROWS] : control==='p2' ? [WASD] : [ARROWS, WASD];
+    const useTouch = !control || control==='solo';
+    let vy = useTouch ? touch.dy : 0, dash = 0;
+    sets.forEach(k=>{
+      if(keys[k.up]) vy -= 1;
+      if(keys[k.down]) vy += 1;
+      if(keys[k.left]) dash -= 1;
+      if(keys[k.right]) dash += 1;
+    });
+    if(useTouch){ if(touch.dashLeft) dash -= 1; if(touch.dashRight) dash += 1; }
+    return {vy: clamp(vy,-1,1), dash: clamp(dash,-1,1), drift: useTouch ? touch.dx*0.5 : 0};
   }
 
   return {read, clear, setTouchEnabled};

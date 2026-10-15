@@ -1,39 +1,30 @@
 "use strict";
 /* =====================================================================
    GAME — the main loop: spawning, movement, collisions and drawing.
+   Works for one player, or two players sharing a keyboard.
    ===================================================================== */
 const Game = (function(){
   const canvas = document.getElementById('gameCanvas');
   const ctx = canvas.getContext('2d');
   const $id = id => document.getElementById(id);
-  const hud = {
-    score: $id('scoreP1'), lives: $id('livesP1'), flash: $id('warnFlash'),
-    countdown: $id('countdown'), wave: $id('hudWave'), combo: $id('hudCombo'),
-    banner: $id('waveBanner'), chips: {},
-  };
-
-  // One HUD chip per power-up kind ("Shield 5s")
-  Object.keys(POWERUP_STYLE).forEach(kind=>{
-    const chip = document.createElement('div');
-    chip.className = 'pu-chip';
-    chip.style.setProperty('--chip', POWERUP_STYLE[kind].color);
-    $id('powerupChips').appendChild(chip);
-    hud.chips[kind] = {el: chip, shown: ''};
-  });
+  const hud = {flash: $id('warnFlash'), countdown: $id('countdown'), banner: $id('waveBanner')};
+  const PLAYER_COLORS = ['#5fe1b0', '#f0a857']; // P1 green, P2 amber (labels in 2-player)
 
   let VW = 960, VH = 540;
   let running = false, paused = false, ended = false, rafId = null, lastT = 0;
-  let player = null, params = null, setup = null;
+  let players = [], params = null, setup = null;
   let anim = 0;                        // always-running clock for character animation
   let fishes = [], bones = [], puffers = [], obstacles = [], predators = [], bosses = [], powerups = [], particles = [], floaters = [];
-  let score = 0, elapsed = 0, wave = 1;
-  let combo = 0, bestCombo = 0, fishEaten = 0, closeCalls = 0;
-  let bonesEaten = 0, goldenEaten = 0, powerupsTaken = new Set(), achievementTimer = 0;
-  let shown = {score:-1, lives:-1, wave:-1, combo:-1};
+  let elapsed = 0, wave = 1, shownWave = -1, achievementTimer = 0;
   let timers = {fish:0, obs:0, pred:0, pu:0};
   let shake = 0;                       // screen-shake strength in px, fades out
   const COUNT_STEP = 0.7;              // seconds per "3", "2", "1"
   let countdownT = 0, goT = 0, shownCount = null, bannerTimer = null;
+
+  const twoPlayer = ()=>players.length>1;
+  const alivePlayers = ()=>players.filter(p=>p.alive);
+  const anyPlayer = key=>players.some(p=>p.alive && p[key]>0);   // world-wide power-ups (slow, freeze)
+  const topScore = ()=>Math.max(...players.map(p=>p.score));
 
   /* ---------------- Canvas sizing ---------------- */
   function fitCanvas(){
@@ -47,7 +38,8 @@ const Game = (function(){
   }
 
   /* ---------------- Lifecycle ---------------- */
-  /* setup = {prey, predators, difficulty, twist?, daily?} — see menus.js */
+  /* setup = {prey, prey2?, predators, difficulty, twist?, daily?} — see menus.js.
+     A prey2 means two players. */
   function start(newSetup){
     if(newSetup) setup = newSetup;
     params = applyTwist(DIFF_PARAMS[setup.difficulty], setup.twist);
@@ -55,32 +47,40 @@ const Game = (function(){
     fitCanvas();
     Scenery.init(VW, VH);
 
-    const prey = findById(PREY_TYPES, setup.prey);
-    const maxLives = params.lives + prey.stats.bonusLives;
-    player = {
-      preyId: prey.id, stats: prey.stats, r: prey.stats.radius,
-      x: VW*0.16, y: VH/2, alive: true, lives: maxLives, maxLives,
-      invulnT: 0, bob: Math.random()*10,
-    };
-    Object.keys(POWERUP_STYLE).forEach(kind=>player[kind+'T'] = 0);
+    const preyIds = setup.prey2 ? [setup.prey, setup.prey2] : [setup.prey];
+    players = preyIds.map((id, i)=>makePlayer(id, i, preyIds.length));
+    buildHud();
 
     fishes = []; bones = []; puffers = []; obstacles = []; predators = []; bosses = [];
     powerups = []; particles = []; floaters = [];
-    score = 0; elapsed = 0; wave = 1; shake = 0; anim = 0;
-    combo = 0; bestCombo = 0; fishEaten = 0; closeCalls = 0;
-    bonesEaten = 0; goldenEaten = 0; powerupsTaken = new Set(); achievementTimer = 0;
-    shown = {score:-1, lives:-1, wave:-1, combo:-1};
+    elapsed = 0; wave = 1; shownWave = -1; shake = 0; anim = 0; achievementTimer = 0;
     countdownT = COUNT_STEP*3; goT = 0; shownCount = null;
     timers = {fish:0.4, obs:1.2, pred:1.6, pu:4};
     ended = false; running = true; paused = false;
     hideBanner();
 
     Input.clear();
-    Input.setTouchEnabled(state.platform==='mobile');
+    Input.setTouchEnabled(state.platform==='mobile' && !twoPlayer());
     Sound.startMusic('game');
     lastT = performance.now();
     cancelAnimationFrame(rafId);
     rafId = requestAnimationFrame(loop);
+  }
+
+  function makePlayer(preyId, index, count){
+    const prey = findById(PREY_TYPES, preyId);
+    const maxLives = params.lives + prey.stats.bonusLives;
+    const p = {
+      index, preyId: prey.id, stats: prey.stats, r: prey.stats.radius,
+      control: count===1 ? 'solo' : (index===0 ? 'p1' : 'p2'),
+      color: PLAYER_COLORS[index],
+      x: VW*0.16, y: count===1 ? VH/2 : VH*(index===0 ? 0.38 : 0.62),
+      alive: true, lives: maxLives, maxLives, invulnT: 0, bob: Math.random()*10,
+      score: 0, combo: 0, bestCombo: 0, fishEaten: 0, closeCalls: 0, bonesEaten: 0, goldenEaten: 0,
+      powerupsTaken: new Set(),
+    };
+    Object.keys(POWERUP_STYLE).forEach(kind=>p[kind+'T'] = 0);
+    return p;
   }
 
   function stop(){
@@ -117,6 +117,69 @@ const Game = (function(){
     if(running) rafId = requestAnimationFrame(loop);
   }
 
+  /* ---------------- HUD (one panel per player) ---------------- */
+  function buildHud(){
+    const wrap = $id('hudPanels');
+    wrap.innerHTML = '';
+    players.forEach(p=>{
+      const panel = document.createElement('div');
+      panel.className = 'hud-panel';
+      if(twoPlayer()) panel.style.setProperty('--player', p.color);
+      const label = twoPlayer() ? `<span class="hud-tag">P${p.index+1}</span>` : 'Score:';
+      panel.innerHTML = `<div class="hud-score">${label} <span class="hud-points"${p.index===0 ? ' id="scoreP1"' : ''}>0</span></div>
+        <div class="hud-lives"></div>
+        <div class="hud-meta">${p.index===0 ? '<span class="hud-wave">Wave 1</span>' : ''}<span class="hud-combo"></span></div>
+        <div class="powerup-indicators"></div>`;
+      const chips = {};
+      Object.keys(POWERUP_STYLE).forEach(kind=>{
+        const chip = document.createElement('div');
+        chip.className = 'pu-chip';
+        chip.style.setProperty('--chip', POWERUP_STYLE[kind].color);
+        panel.querySelector('.powerup-indicators').appendChild(chip);
+        chips[kind] = {el: chip, shown: ''};
+      });
+      wrap.appendChild(panel);
+      p.hud = {
+        panel, chips,
+        score: panel.querySelector('.hud-points'),
+        lives: panel.querySelector('.hud-lives'),
+        wave: panel.querySelector('.hud-wave'),
+        combo: panel.querySelector('.hud-combo'),
+        shown: {score:-1, lives:-1, combo:-1, alive:true},
+      };
+    });
+  }
+
+  function updateHUD(){
+    players.forEach(p=>{
+      const h = p.hud, s = h.shown;
+      if(p.score!==s.score){ h.score.textContent = p.score; s.score = p.score; }
+      if(p.combo!==s.combo){
+        const mult = comboMultiplier(p.combo);
+        h.combo.textContent = p.combo>=2 ? `Combo ${p.combo}${mult>1 ? ' · x'+mult : ''}` : '';
+        h.combo.classList.toggle('hot', mult>1);
+        s.combo = p.combo;
+      }
+      if(p.lives!==s.lives){
+        h.lives.innerHTML = '';
+        for(let i=0;i<p.maxLives;i++){
+          const dot = document.createElement('div');
+          dot.className = 'life-dot' + (i<p.lives ? '' : ' off');
+          h.lives.appendChild(dot);
+        }
+        s.lives = p.lives;
+      }
+      if(p.alive!==s.alive){ h.panel.classList.toggle('out', !p.alive); s.alive = p.alive; }
+      for(const kind in h.chips){
+        const t = p[kind+'T'];
+        const text = t>0 ? `${POWERUP_STYLE[kind].name} ${Math.ceil(t)}s` : '';
+        const chip = h.chips[kind];
+        if(text!==chip.shown){ chip.el.textContent = text; chip.el.classList.toggle('active', t>0); chip.shown = text; }
+      }
+    });
+    if(wave!==shownWave){ players[0].hud.wave.textContent = `Wave ${wave}`; shownWave = wave; }
+  }
+
   /* ---------------- Spawning ---------------- */
   function spawnFish(){
     const speed = params.fishSpeed*getIntensity(elapsed);
@@ -144,7 +207,7 @@ const Game = (function(){
       type: type.id, x: fromLeft ? -60 : VW+60, y, baseY: y, dir: fromLeft ? 1 : -1,
       sp: params.predSpeed*type.stats.speedMul*getIntensity(elapsed)*rand(0.9,1.2),
       w: type.stats.w, h: type.stats.h, weave: type.stats.weave, age: Math.random()*6, seed: Math.random()*10,
-      warn: params.warnTime, phase:'warn', hit:false, scored:false,
+      warn: params.warnTime, phase:'warn', hitBy: new Set(), scoredBy: new Set(),
     });
   }
   function spawnPowerup(){
@@ -153,21 +216,22 @@ const Game = (function(){
   function spawnBoss(slot){
     const trailGap = VW*0.26 + slot*90;
     const type = setup.predators[slot % setup.predators.length] || 'orca';
-    bosses.push({slot, type, trailGap, x:player.x-trailGap, y:player.y, r:70-slot*3,
-      phase:'lurk', dir:-1, cool:rand(1.0,1.8), warnT:0, lungeT:0, minDist:Infinity, hit:false});
+    const anchor = alivePlayers()[0] || players[0];
+    bosses.push({slot, type, trailGap, x:anchor.x-trailGap, y:anchor.y, r:70-slot*3,
+      phase:'lurk', dir:-1, cool:rand(1.0,1.8), warnT:0, lungeT:0, minDist:Infinity, hit:false, target:null});
   }
   function updateBossSpawns(){
     if(elapsed<1.2) return;
-    const wanted = BOSS_SCORE_THRESHOLDS.filter(s=>score>=s).length;
+    const wanted = BOSS_SCORE_THRESHOLDS.filter(s=>topScore()>=s).length;
     while(bosses.length<wanted) spawnBoss(bosses.length);
   }
 
   /* ---------------- Countdown "3, 2, 1, Go!" ---------------- */
-  // The player can already swim around, but nothing spawns or moves yet.
+  // Players can already swim around, but nothing spawns or moves yet.
   function updateCountdown(dt){
     countdownT -= dt;
     updateBackground(dt);
-    movePlayer(dt);
+    players.forEach(p=>movePlayer(p, dt));
     updateEffects(dt);
     if(countdownT<=0){ countdownT = 0; goT = 0.6; showCount('Go!'); Sound.sfx('go'); }
     else {
@@ -190,7 +254,7 @@ const Game = (function(){
     if(w===wave) return;
     wave = w;
     const bonus = WAVE_BONUS*(wave-1);
-    score += bonus;
+    alivePlayers().forEach(p=>p.score += bonus);
     showBanner(`Wave ${wave}`, `+${bonus} bonus · the water gets rougher`);
     Sound.sfx('wave');
   }
@@ -206,9 +270,9 @@ const Game = (function(){
   /* ---------------- Update ---------------- */
   function updateBackground(dt){ Scenery.update(dt, anim); }
 
-  function movePlayer(dt){
-    const p = player;
-    const move = Input.read();
+  function movePlayer(p, dt){
+    if(!p.alive) return;
+    const move = Input.read(p.control);
     const boost = p.speedT>0 ? 1.5 : 1;
     p.y += move.vy*p.stats.speed*boost*dt;
     p.x += (move.dash*p.stats.dash + move.drift*p.stats.speed)*boost*dt;
@@ -231,20 +295,26 @@ const Game = (function(){
     shake = Math.max(0, shake - dt*45);
   }
 
+  // first living player within reach(p) of the point (x, y)
+  function touching(x, y, reach){
+    return alivePlayers().find(p=>Math.hypot(x-p.x, y-p.y) < reach(p));
+  }
+
   function update(dt){
-    const p = player;
     const intensity = getIntensity(elapsed);
     if(goT>0){ goT -= dt; if(goT<=0) hideCount(); }
     checkWave();
     updateBackground(dt);
 
-    // timers on the player
-    p.invulnT = Math.max(0, p.invulnT-dt);
-    for(const kind in POWERUP_STYLE) p[kind+'T'] = Math.max(0, p[kind+'T']-dt);
-    const slow = p.slowT>0 ? 0.45 : 1;
-    const frozen = p.freezeT>0;
+    players.forEach(p=>{
+      p.invulnT = Math.max(0, p.invulnT-dt);
+      for(const kind in POWERUP_STYLE) p[kind+'T'] = Math.max(0, p[kind+'T']-dt);
+    });
+    // Slow-mo and Freeze affect the whole sea, whoever picked them up
+    const slow = anyPlayer('slowT') ? 0.45 : 1;
+    const frozen = anyPlayer('freezeT');
 
-    movePlayer(dt);
+    players.forEach(p=>movePlayer(p, dt));
 
     // spawns
     timers.fish -= dt; if(timers.fish<=0){ spawnFish(); timers.fish = rand(0.5,0.9)/(params.fishRate*intensity); }
@@ -253,34 +323,37 @@ const Game = (function(){
     else if(!frozen){ timers.pred -= dt; if(timers.pred<=0){ spawnPredator(); timers.pred = rand(1.6,2.6)/(params.predRate*intensity); } }
     timers.pu -= dt; if(timers.pu<=0){ spawnPowerup(); timers.pu = rand(7,11)*params.powerupEvery; }
 
-    // good fish (magnet pulls them in)
+    // good fish (a magnet pulls them toward its owner)
     for(let i=fishes.length-1;i>=0;i--){
       const f = fishes[i]; f.x -= f.sp*slow*dt; f.wob += dt*4;
       if(f.golden && Math.random()<0.3) particles.push({x:f.x-12, y:f.y+rand(-6,6), vx:rand(-40,-10), vy:rand(-20,20), life:0.4, color:'#ffe27a'});
-      const d = Math.hypot(f.x-p.x, f.y-p.y);
-      if(p.magnetT>0 && d<90){ f.x += (p.x-f.x)*0.12; f.y += (p.y-f.y)*0.12; }
-      if(d < f.r+p.r){ eatFish(f); fishes.splice(i,1); }
+      const puller = alivePlayers().find(p=>p.magnetT>0 && Math.hypot(f.x-p.x, f.y-p.y)<90);
+      if(puller){ f.x += (puller.x-f.x)*0.12; f.y += (puller.y-f.y)*0.12; }
+      const eater = touching(f.x, f.y, p=>f.r+p.r);
+      if(eater){ eatFish(eater, f); fishes.splice(i,1); }
       else if(f.x<-30) fishes.splice(i,1);
     }
     // bones — break your combo
     for(let i=bones.length-1;i>=0;i--){
       const b = bones[i]; b.x -= b.sp*slow*dt; b.wob += dt*4;
-      if(Math.hypot(b.x-p.x, b.y-p.y) < b.r+p.r){
-        addPoints(b.val, b.x, b.y);
-        bonesEaten++;
-        breakCombo();
+      const eater = touching(b.x, b.y, p=>b.r+p.r);
+      if(eater){
+        addPoints(eater, b.val, b.x, b.y);
+        eater.bonesEaten++;
+        breakCombo(eater);
         spawnParticles(b.x,b.y,'#e0e0e0',6); Sound.sfx('eatBad'); bones.splice(i,1);
       }
       else if(b.x<-30) bones.splice(i,1);
     }
-    // pufferfish — puff up when you get close; touching one hurts
+    // pufferfish — puff up when anyone gets close; touching one hurts
     for(let i=puffers.length-1;i>=0;i--){
       const pf = puffers[i]; pf.x -= pf.sp*slow*dt; pf.wob += dt*3;
-      const d = Math.hypot(pf.x-p.x, pf.y-p.y);
-      pf.puff = clamp(pf.puff + (d<130 ? dt*5 : -dt*2), 0, 1);
-      if(d < 11+pf.puff*12 + p.r*0.75){
+      const near = alivePlayers().some(p=>Math.hypot(pf.x-p.x, pf.y-p.y)<130);
+      pf.puff = clamp(pf.puff + (near ? dt*5 : -dt*2), 0, 1);
+      const victim = touching(pf.x, pf.y, p=>11+pf.puff*12 + p.r*0.75);
+      if(victim){
         spawnParticles(pf.x,pf.y,'#f5f0d6',10);
-        hitPlayer(false);
+        hitPlayer(victim, false);
         puffers.splice(i,1);
       }
       else if(pf.x<-40) puffers.splice(i,1);
@@ -288,7 +361,9 @@ const Game = (function(){
     // glaciers
     for(let i=obstacles.length-1;i>=0;i--){
       const o = obstacles[i]; o.x -= o.sp*slow*dt;
-      if(Math.abs(o.x-p.x)<o.w/2+p.r*0.7 && Math.abs(o.y-p.y)<o.h/2+p.r*0.7) hitPlayer(false);
+      alivePlayers().forEach(p=>{
+        if(Math.abs(o.x-p.x)<o.w/2+p.r*0.7 && Math.abs(o.y-p.y)<o.h/2+p.r*0.7) hitPlayer(p, false);
+      });
       if(o.x<-80) obstacles.splice(i,1);
     }
     // predators: flash a warning, then charge across their lane (Freeze stops them dead)
@@ -300,26 +375,30 @@ const Game = (function(){
         if(pr.warn<=0){ pr.phase='charge'; Sound.sfx('warn'); }
         continue;
       }
-      const before = pr.x - p.x;
+      const before = players.map(p=>pr.x - p.x);
       pr.age += dt;
       pr.x += pr.dir*pr.sp*slow*dt;
       if(pr.weave) pr.y = clamp(pr.baseY + Math.sin(pr.age*3.2)*pr.weave, 30, VH-30);
-      const gapY = Math.abs(pr.y-p.y) - (pr.h/2 + p.r*0.75);
-      if(Math.abs(pr.x-p.x)<pr.w/2+p.r*0.75 && gapY<0){ pr.hit = true; hitPlayer(true); }
-      // close call: it swept past you by a whisker
-      if(!pr.scored && !pr.hit && Math.sign(before)!==Math.sign(pr.x-p.x) && gapY>=0 && gapY<CLOSE_CALL.margin){
-        pr.scored = true;
-        closeCall(CLOSE_CALL.points);
-      }
+      alivePlayers().forEach(p=>{
+        const gapY = Math.abs(pr.y-p.y) - (pr.h/2 + p.r*0.75);
+        if(Math.abs(pr.x-p.x)<pr.w/2+p.r*0.75 && gapY<0){ pr.hitBy.add(p.index); hitPlayer(p, true); }
+        // close call: it swept past by a whisker
+        else if(!pr.scoredBy.has(p.index) && !pr.hitBy.has(p.index)
+          && Math.sign(before[p.index])!==Math.sign(pr.x-p.x) && gapY>=0 && gapY<CLOSE_CALL.margin){
+          pr.scoredBy.add(p.index);
+          closeCall(p, CLOSE_CALL.points);
+        }
+      });
       if(pr.x<-100 || pr.x>VW+100) predators.splice(i,1);
     }
     if(params.isBoss && !frozen) updateBosses(dt, intensity, slow);
     // powerups
     for(let i=powerups.length-1;i>=0;i--){
       const pu = powerups[i]; pu.x -= pu.sp*dt; pu.bob += dt*3;
-      if(Math.hypot(pu.x-p.x, pu.y-p.y) < pu.r+p.r){
-        p[pu.kind+'T'] = POWERUP_DURATIONS[pu.kind];
-        powerupsTaken.add(pu.kind);
+      const taker = touching(pu.x, pu.y, p=>pu.r+p.r);
+      if(taker){
+        taker[pu.kind+'T'] = POWERUP_DURATIONS[pu.kind];
+        taker.powerupsTaken.add(pu.kind);
         addFloater(pu.x, pu.y-10, POWERUP_STYLE[pu.kind].name+'!', POWERUP_STYLE[pu.kind].color);
         Sound.sfx(pu.kind==='freeze' ? 'freeze' : 'powerup');
         powerups.splice(i,1);
@@ -329,14 +408,17 @@ const Game = (function(){
     updateEffects(dt);
     updateHUD();
 
-    // check for achievements twice a second so they pop up mid-run
-    achievementTimer -= dt;
-    if(achievementTimer<=0){ achievementTimer = 0.5; Progress.check(runStats()).forEach(announceAchievement); }
+    // achievements are for solo runs; checked twice a second so they pop up mid-run
+    if(!twoPlayer()){
+      achievementTimer -= dt;
+      if(achievementTimer<=0){ achievementTimer = 0.5; Progress.check(runStats(players[0])).forEach(announceAchievement); }
+    }
   }
 
-  function runStats(){
-    return {score, wave, elapsed, fishEaten, bestCombo, closeCalls, bonesEaten, goldenEaten,
-      powerupsTaken:[...powerupsTaken], difficulty:setup.difficulty, daily:!!setup.daily, finished:false};
+  function runStats(p){
+    return {score:p.score, wave, elapsed, fishEaten:p.fishEaten, bestCombo:p.bestCombo, closeCalls:p.closeCalls,
+      bonesEaten:p.bonesEaten, goldenEaten:p.goldenEaten, powerupsTaken:[...p.powerupsTaken],
+      difficulty:setup.difficulty, daily:!!setup.daily, finished:false};
   }
   function announceAchievement(a){
     const reward = a.unlocks ? ` — unlocked ${findById(PREY_TYPES.concat(PREDATOR_TYPES), a.unlocks).name}!` : '';
@@ -344,10 +426,13 @@ const Game = (function(){
     Sound.sfx('achievement');
   }
 
-  // Bosses shadow the prey, then surprise-lunge at their exact spot.
+  // Bosses shadow the nearest prey, then surprise-lunge at their exact spot.
   function updateBosses(dt, intensity, slow){
-    const p = player;
     bosses.forEach(boss=>{
+      // pick the closest living player as the target
+      let p = null, bestD = Infinity;
+      alivePlayers().forEach(pl=>{ const d = Math.hypot(pl.x-boss.x, pl.y-boss.y); if(d<bestD){ bestD = d; p = pl; } });
+      if(!p) return;
       const reach = boss.r*0.8 + p.r*0.7;
       if(boss.phase==='lurk'){
         const rate = Math.min(1, dt*3.2*intensity*slow);
@@ -360,7 +445,7 @@ const Game = (function(){
       } else if(boss.phase==='warn'){
         boss.warnT -= dt;
         boss.dir = 1;
-        if(boss.warnT<=0){ boss.phase='lunge'; boss.lungeT=0.5; boss.minDist=Infinity; boss.hit=false; }
+        if(boss.warnT<=0){ boss.phase='lunge'; boss.lungeT=0.5; boss.minDist=Infinity; boss.hit=false; boss.target=p; }
       } else if(boss.phase==='lunge'){
         const spd = 480*intensity*slow;
         const dx = p.x-boss.x, dy = p.y-boss.y;
@@ -372,7 +457,7 @@ const Game = (function(){
         boss.lungeT -= dt;
         if(boss.lungeT<=0 || dist<20){
           boss.phase='retreat';
-          if(!boss.hit && boss.minDist-reach < CLOSE_CALL.margin*1.5) closeCall(CLOSE_CALL.bossPoints);
+          if(!boss.hit && boss.target && boss.target.alive && boss.minDist-reach < CLOSE_CALL.margin*1.5) closeCall(boss.target, CLOSE_CALL.bossPoints);
         }
       } else if(boss.phase==='retreat'){
         const tx = p.x-boss.trailGap, rate = Math.min(1, dt*1.6*intensity*slow);
@@ -381,40 +466,42 @@ const Game = (function(){
         boss.dir = -1;
         if(Math.hypot(tx-boss.x, p.y-boss.y)<24){ boss.phase='lurk'; boss.cool = rand(1.3,2.2)/intensity; }
       }
-      if(Math.hypot(boss.x-p.x, boss.y-p.y) < reach){ boss.hit = true; hitPlayer(true); }
+      alivePlayers().forEach(pl=>{
+        if(Math.hypot(boss.x-pl.x, boss.y-pl.y) < boss.r*0.8 + pl.r*0.7){ boss.hit = true; hitPlayer(pl, true); }
+      });
     });
   }
 
   /* ---------------- Scoring & damage ---------------- */
-  function eatFish(f){
-    combo++; fishEaten++;
-    bestCombo = Math.max(bestCombo, combo);
-    const mult = comboMultiplier(combo);
-    addPoints(f.val*mult, f.x, f.y, f.golden);
-    if(mult > comboMultiplier(combo-1)){
-      addFloater(player.x, player.y-44, `Combo x${mult}!`, '#f0a857', true);
+  function eatFish(p, f){
+    p.combo++; p.fishEaten++;
+    p.bestCombo = Math.max(p.bestCombo, p.combo);
+    const mult = comboMultiplier(p.combo);
+    addPoints(p, f.val*mult, f.x, f.y, f.golden);
+    if(mult > comboMultiplier(p.combo-1)){
+      addFloater(p.x, p.y-44, `Combo x${mult}!`, '#f0a857', true);
       Sound.sfx('combo');
     }
-    if(f.golden){ goldenEaten++; spawnParticles(f.x,f.y,'#ffcf3f',16); Sound.sfx('golden'); }
+    if(f.golden){ p.goldenEaten++; spawnParticles(f.x,f.y,'#ffcf3f',16); Sound.sfx('golden'); }
     else { spawnParticles(f.x,f.y,f.hue,6); Sound.sfx('eatGood'); }
   }
 
-  function breakCombo(){
-    if(combo>=COMBO_STEP) addFloater(player.x, player.y-44, 'Combo lost', '#b7c4cc');
-    combo = 0;
+  function breakCombo(p){
+    if(p.combo>=COMBO_STEP) addFloater(p.x, p.y-44, 'Combo lost', '#b7c4cc');
+    p.combo = 0;
   }
 
-  function closeCall(points){
-    closeCalls++;
-    score += points;
-    addFloater(player.x, player.y-46, `Close call! +${points}`, '#9b6bff', true);
+  function closeCall(p, points){
+    p.closeCalls++;
+    p.score += points;
+    addFloater(p.x, p.y-46, `Close call! +${points}`, '#9b6bff', true);
     Sound.sfx('closeCall');
   }
 
   // The Double power-up multiplies everything — bonuses and bone penalties alike.
-  function addPoints(val, x, y, big){
-    const points = val*(player.multT>0 ? 2 : 1);
-    score = Math.max(0, score + points);
+  function addPoints(p, val, x, y, big){
+    const points = val*(p.multT>0 ? 2 : 1);
+    p.score = Math.max(0, p.score + points);
     addFloater(x, y-12, (points>0 ? '+' : '−') + Math.abs(points), points>0 ? (big ? '#ffd75a' : '#5fe1b0') : '#ff8a8a', big || Math.abs(points)>=4);
   }
 
@@ -423,11 +510,10 @@ const Game = (function(){
     floaters.push({x, y, text, color, size: big ? 24 : 19, life:0.9});
   }
 
-  function addShake(px){ if(!prefersReducedMotion) shake = Math.max(shake, px); }
+  function addShake(px){ if(!reduceMotion()) shake = Math.max(shake, px); }
 
-  // fatal = predator/boss bite; on 1-life levels (Extreme) that's an instant game over.
-  function hitPlayer(fatal){
-    const p = player;
+  // fatal = predator/boss bite; on 1-life levels (Extreme) that's an instant knock-out.
+  function hitPlayer(p, fatal){
     if(!p.alive || p.invulnT>0) return;
     if(p.shieldT>0){
       p.shieldT = 0; p.invulnT = 1.0;
@@ -437,13 +523,17 @@ const Game = (function(){
     }
     p.invulnT = 1.0;
     p.lives -= 1;
-    breakCombo();
+    breakCombo(p);
     spawnParticles(p.x,p.y,'#e85b5b',14);
     Sound.sfx('hit');
     flashWarn(p.x,p.y);
     addShake(12);
     addFloater(p.x, p.y-30, '−1 ♥', '#ff8a8a', true);
-    if(p.lives<=0 || (fatal && params.lives===1)){ p.lives = 0; p.alive = false; endGame(); }
+    if(p.lives<=0 || (fatal && params.lives===1)){
+      p.lives = 0; p.alive = false;
+      if(twoPlayer() && alivePlayers().length) addFloater(p.x, p.y-60, `P${p.index+1} is out!`, p.color, true);
+      if(!alivePlayers().length) endGame();
+    }
   }
 
   function flashWarn(x,y){
@@ -457,32 +547,6 @@ const Game = (function(){
     for(let i=0;i<n;i++) particles.push({x, y, vx:rand(-80,80), vy:rand(-80,80), life:rand(0.3,0.6), color});
   }
 
-  function updateHUD(){
-    if(score!==shown.score){ hud.score.textContent = score; shown.score = score; }
-    if(wave!==shown.wave){ hud.wave.textContent = `Wave ${wave}`; shown.wave = wave; }
-    if(combo!==shown.combo){
-      const mult = comboMultiplier(combo);
-      hud.combo.textContent = combo>=2 ? `Combo ${combo}${mult>1 ? ' · x'+mult : ''}` : '';
-      hud.combo.classList.toggle('hot', mult>1);
-      shown.combo = combo;
-    }
-    if(player.lives!==shown.lives){
-      hud.lives.innerHTML = '';
-      for(let i=0;i<player.maxLives;i++){
-        const dot = document.createElement('div');
-        dot.className = 'life-dot' + (i<player.lives ? '' : ' off');
-        hud.lives.appendChild(dot);
-      }
-      shown.lives = player.lives;
-    }
-    for(const kind in hud.chips){
-      const t = player[kind+'T'];
-      const text = t>0 ? `${POWERUP_STYLE[kind].name} ${Math.ceil(t)}s` : '';
-      const chip = hud.chips[kind];
-      if(text!==chip.shown){ chip.el.textContent = text; chip.el.classList.toggle('active', t>0); chip.shown = text; }
-    }
-  }
-
   function endGame(){
     if(ended) return;
     ended = true;
@@ -490,26 +554,42 @@ const Game = (function(){
     stop();
     Sound.sfx('gameover');
     const level = findById(DIFFICULTIES, setup.difficulty);
-    const preyName = findById(PREY_TYPES, setup.prey).name;
+    const statsLine = p=>`${p.fishEaten} fish · best combo ${p.bestCombo} · ${p.closeCalls} close call${p.closeCalls===1?'':'s'}`;
+
+    if(twoPlayer()){
+      const [a, b] = players;
+      const names = players.map(p=>findById(PREY_TYPES, p.preyId).name);
+      $id('gameoverHeadline').textContent = a.score===b.score ? "It's a tie!" : `Player ${a.score>b.score ? 1 : 2} wins!`;
+      $id('finalScore').textContent = `${a.score} – ${b.score}`;
+      $id('resultLine').textContent = `${level.name} · ${names[0]} vs ${names[1]} · reached wave ${wave}`;
+      $id('runStats').textContent = `P1: ${statsLine(a)}\nP2: ${statsLine(b)}`;
+      $id('highscoreLine').textContent = 'Two-player match';
+      $id('newBestBadge').classList.add('hidden');
+      $id('shareDailyBtn').classList.add('hidden');
+      show('screen-gameover');
+      return;
+    }
+
+    const p = players[0];
     let newBest, bestText;
     if(setup.daily){
       const before = Progress.dailyBest();
-      newBest = score>before;
-      bestText = `Today's best: ${Math.max(before, score)}`;
+      newBest = p.score>before;
+      bestText = `Today's best: ${Math.max(before, p.score)}`;
     } else {
-      const result = HighScore.submit(level.id, score);
+      const result = HighScore.submit(level.id, p.score);
       newBest = result.isNew;
       bestText = `Best on ${level.name}: ${result.best}`;
     }
-    newBest = newBest && score>0;
-    Progress.finishRun(runStats()).forEach(announceAchievement);
+    newBest = newBest && p.score>0;
+    Progress.finishRun(runStats(p)).forEach(announceAchievement);
 
     $id('gameoverHeadline').textContent = newBest ? 'New Best!' : 'Game Over';
-    $id('finalScore').textContent = score;
+    $id('finalScore').textContent = p.score;
     $id('resultLine').textContent = setup.daily
       ? `Daily challenge · ${setup.twist.name} · reached wave ${wave}`
-      : `${level.name} · ${preyName} · reached wave ${wave}`;
-    $id('runStats').textContent = `${fishEaten} fish · best combo ${bestCombo} · ${closeCalls} close call${closeCalls===1?'':'s'}`;
+      : `${level.name} · ${findById(PREY_TYPES, p.preyId).name} · reached wave ${wave}`;
+    $id('runStats').textContent = statsLine(p);
     $id('highscoreLine').textContent = bestText;
     $id('newBestBadge').classList.toggle('hidden', !newBest);
     $id('shareDailyBtn').classList.toggle('hidden', !setup.daily);
@@ -518,8 +598,7 @@ const Game = (function(){
 
   /* ---------------- Draw ---------------- */
   function draw(){
-    const p = player;
-    const frozen = p.freezeT>0;
+    const frozen = anyPlayer('freezeT');
     ctx.save();
     if(shake>0) ctx.translate(rand(-shake,shake), rand(-shake,shake));
     const night = Scenery.draw(ctx, VW, VH, elapsed, anim);
@@ -556,8 +635,9 @@ const Game = (function(){
       }
     });
 
-    // player (flickers while invulnerable)
-    if(p.alive && (p.invulnT<=0 || Math.sin(elapsed*30)>0)){
+    // players (flicker while invulnerable)
+    players.forEach(p=>{
+      if(!p.alive || (p.invulnT>0 && Math.sin(elapsed*30)<=0)) return;
       const y = p.y+Math.sin(p.bob)*4;
       if(p.shieldT>0){
         ctx.strokeStyle='rgba(143,217,232,.8)'; ctx.lineWidth=3;
@@ -567,8 +647,9 @@ const Game = (function(){
         ctx.strokeStyle='rgba(232,91,91,.25)'; ctx.lineWidth=2; ctx.setLineDash([6,8]);
         ctx.beginPath(); ctx.arc(p.x,y,90,elapsed*2,elapsed*2+Math.PI*2); ctx.stroke(); ctx.setLineDash([]);
       }
-      lit(()=>drawPrey(ctx, p.preyId, p.x, y, 1, 1.4, anim*(p.speedT>0 ? 1.6 : 1)));
-    }
+      lit(()=>drawPrey(ctx, p.preyId, p.x, y, 1, 1.4, anim*(p.speedT>0 ? 1.6 : 1) + p.index*0.7));
+      if(twoPlayer()) drawPlayerTag(p, y);
+    });
 
     particles.forEach(pt=>{
       ctx.save(); ctx.globalAlpha = Math.max(0,pt.life/0.6); ctx.fillStyle = pt.color;
@@ -589,12 +670,25 @@ const Game = (function(){
 
     // icy tint while Freeze is active, slow-mo purple tint
     if(frozen){ ctx.fillStyle='rgba(190,235,255,.08)'; ctx.fillRect(0,0,VW,VH); }
-    else if(p.slowT>0){ ctx.fillStyle='rgba(155,107,255,.06)'; ctx.fillRect(0,0,VW,VH); }
+    else if(anyPlayer('slowT')){ ctx.fillStyle='rgba(155,107,255,.06)'; ctx.fillRect(0,0,VW,VH); }
 
     // vignette
     const vg = ctx.createRadialGradient(VW/2,VH/2,VH*0.35,VW/2,VH/2,VH*0.9);
     vg.addColorStop(0,'rgba(0,0,0,0)'); vg.addColorStop(1,'rgba(0,0,0,.35)');
     ctx.fillStyle = vg; ctx.fillRect(0,0,VW,VH);
+  }
+
+  // "P1" / "P2" bubble above each player in two-player mode
+  function drawPlayerTag(p, y){
+    const ty = y - p.r*1.4 - 14;
+    ctx.save();
+    ctx.fillStyle = p.color;
+    ctx.beginPath(); ctx.ellipse(p.x, ty, 14, 9, 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(p.x-4, ty+7); ctx.lineTo(p.x, ty+13); ctx.lineTo(p.x+4, ty+7); ctx.fill();
+    ctx.fillStyle = '#0b2a45'; ctx.font = "800 11px 'Baloo 2', 'Nunito', sans-serif";
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(`P${p.index+1}`, p.x, ty+1);
+    ctx.restore();
   }
 
   return {
@@ -604,6 +698,10 @@ const Game = (function(){
     get running(){ return running; },
     get paused(){ return paused; },
     // read-only snapshot, handy for debugging in the browser console
-    debug(){ return {score, wave, combo, bestCombo, fishEaten, closeCalls, elapsed}; },
+    debug(){
+      const p = players[0] || {};
+      return {score:p.score, wave, combo:p.combo, bestCombo:p.bestCombo, fishEaten:p.fishEaten, closeCalls:p.closeCalls, elapsed,
+        players: players.map(pl=>({score:pl.score, lives:pl.lives, alive:pl.alive}))};
+    },
   };
 })();
